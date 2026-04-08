@@ -2,7 +2,16 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
-import { Modal, Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
+import {
+  Modal,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  StatusBar as RNStatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { BottomNav } from "./src/components/ui/BottomNav";
 import { carModels } from "./src/data/cars";
 import { chargingStations } from "./src/data/stations";
@@ -426,6 +435,7 @@ const styles = StyleSheet.create({
   },
   screen: {
     flex: 1,
+    paddingTop: Platform.OS === "android" ? (RNStatusBar.currentHeight ?? 0) : 0,
   },
   loadingWrap: {
     flex: 1,

@@ -1,5 +1,5 @@
 ﻿import { PropsWithChildren } from "react";
-import { SafeAreaView, StyleSheet } from "react-native";
+import { Platform, SafeAreaView, StatusBar, StyleSheet } from "react-native";
 import { colors } from "../../constants/colors";
 
 export function Screen({ children }: PropsWithChildren) {
@@ -10,5 +10,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight ?? 0) : 0,
   },
 });

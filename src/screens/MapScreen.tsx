@@ -318,15 +318,32 @@ export function MapScreen({
           </Pressable>
         </View>
 
-        <View style={styles.searchWrap}>
-          <MaterialCommunityIcons name="magnify" size={18} color={colors.textMuted} />
-          <TextInput
-            placeholder="Search stations, speed, or connector..."
-            placeholderTextColor={colors.textMuted}
-            value={search}
-            onChangeText={setSearch}
-            style={styles.searchInput}
-          />
+        <View style={styles.searchRow}>
+          <View style={styles.searchWrap}>
+            <MaterialCommunityIcons name="magnify" size={18} color={colors.textMuted} />
+            <TextInput
+              placeholder="Search stations, speed, or connector..."
+              placeholderTextColor={colors.textMuted}
+              value={search}
+              onChangeText={setSearch}
+              style={styles.searchInput}
+            />
+          </View>
+          <Pressable
+            style={[styles.inlineFilterBtn, activeFilterCount > 0 && styles.inlineFilterBtnActive]}
+            onPress={openFilterModal}
+          >
+            <MaterialCommunityIcons
+              name="tune-variant"
+              size={18}
+              color={activeFilterCount > 0 ? colors.emerald : colors.text}
+            />
+            {activeFilterCount > 0 ? (
+              <View style={styles.inlineFilterBadge}>
+                <Text style={styles.inlineFilterBadgeText}>{activeFilterCount}</Text>
+              </View>
+            ) : null}
+          </Pressable>
         </View>
 
         <View style={styles.controlsRow}>
@@ -340,16 +357,6 @@ export function MapScreen({
               color={colors.cyan}
             />
             <Text style={styles.controlBtnText}>{sortByNearest ? "Nearest" : "Farthest"}</Text>
-          </Pressable>
-
-          <Pressable style={[styles.controlBtn, styles.filterOpenBtn]} onPress={openFilterModal}>
-            <MaterialCommunityIcons name="tune-variant" size={14} color={colors.text} />
-            <Text style={styles.controlBtnText}>Filters</Text>
-            {activeFilterCount > 0 ? (
-              <View style={styles.filterCountBadge}>
-                <Text style={styles.filterCountText}>{activeFilterCount}</Text>
-              </View>
-            ) : null}
           </Pressable>
 
           <Pressable
@@ -655,6 +662,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   searchWrap: {
+    flex: 1,
     height: 44,
     borderRadius: 13,
     borderWidth: 1,
@@ -664,6 +672,44 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  inlineFilterBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: "rgba(8, 17, 28, 0.95)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  inlineFilterBtnActive: {
+    borderColor: "#24d6a066",
+    backgroundColor: "#24d6a022",
+  },
+  inlineFilterBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: "#052e16",
+    backgroundColor: colors.emerald,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  inlineFilterBadgeText: {
+    color: "#02231a",
+    fontSize: 10,
+    fontWeight: "800",
   },
   searchInput: {
     flex: 1,
@@ -690,24 +736,6 @@ const styles = StyleSheet.create({
   sortBtn: {
     borderColor: "#31d4f55c",
     backgroundColor: "#31d4f51c",
-  },
-  filterOpenBtn: {
-    borderColor: "#f4b24566",
-    backgroundColor: "#f4b24521",
-  },
-  filterCountBadge: {
-    minWidth: 18,
-    height: 18,
-    paddingHorizontal: 4,
-    borderRadius: 9,
-    backgroundColor: colors.emerald,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  filterCountText: {
-    color: "#02231a",
-    fontSize: 10,
-    fontWeight: "800",
   },
   controlBtnActive: {
     borderColor: "#24d6a066",
