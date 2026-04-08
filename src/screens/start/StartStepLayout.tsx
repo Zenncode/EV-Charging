@@ -18,8 +18,8 @@ export function StartStepLayout({
   onPress,
 }: StartStepLayoutProps) {
   const safePercent = Math.max(0, Math.min(100, blackOverlayPercent));
-  const topAlpha = Math.min(0.85, safePercent / 100 / 2);
-  const bottomAlpha = Math.min(0.96, safePercent / 100);
+  const topAlpha = Math.min(0.5, (safePercent / 100) * 0.3);
+  const bottomAlpha = Math.min(0.8, (safePercent / 100) * 0.7);
 
   return (
     <View style={styles.container}>
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: "52%",
+    height: "46%",
     backgroundColor: "rgba(4, 9, 18, 0.66)",
   },
   content: {
