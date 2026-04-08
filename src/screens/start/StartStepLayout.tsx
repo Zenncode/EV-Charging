@@ -6,6 +6,7 @@ interface StartStepLayoutProps {
   description: string;
   backgroundUri: string | null;
   blackOverlayPercent: number;
+  ctaLabel: string;
   onPress: () => void;
 }
 
@@ -15,6 +16,7 @@ export function StartStepLayout({
   description,
   backgroundUri,
   blackOverlayPercent,
+  ctaLabel,
   onPress,
 }: StartStepLayoutProps) {
   const safePercent = Math.max(0, Math.min(100, blackOverlayPercent));
@@ -25,6 +27,8 @@ export function StartStepLayout({
   const fadeAlphaC = Math.min(0.24, base * 0.14);
   const fadeAlphaD = Math.min(0.32, base * 0.21);
   const fadeAlphaE = Math.min(0.42, base * 0.29);
+  const edgeVignetteAlpha = Math.min(0.22, base * 0.13);
+  const bottomFocusAlpha = Math.min(0.34, base * 0.22);
 
   return (
     <View style={styles.container}>
@@ -40,13 +44,16 @@ export function StartStepLayout({
         <View style={[styles.bottomFadeC, { backgroundColor: `rgba(0, 0, 0, ${fadeAlphaC})` }]} />
         <View style={[styles.bottomFadeD, { backgroundColor: `rgba(0, 0, 0, ${fadeAlphaD})` }]} />
         <View style={[styles.bottomFadeE, { backgroundColor: `rgba(0, 0, 0, ${fadeAlphaE})` }]} />
+        <View style={[styles.leftVignette, { backgroundColor: `rgba(0, 0, 0, ${edgeVignetteAlpha})` }]} />
+        <View style={[styles.rightVignette, { backgroundColor: `rgba(0, 0, 0, ${edgeVignetteAlpha})` }]} />
+        <View style={[styles.bottomFocus, { backgroundColor: `rgba(0, 0, 0, ${bottomFocusAlpha})` }]} />
 
         <View style={styles.content}>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.description}>{description}</Text>
 
           <Pressable style={styles.ctaBtn} onPress={onPress}>
-            <Text style={styles.ctaText}>Get Started</Text>
+            <Text style={styles.ctaText}>{ctaLabel}</Text>
           </Pressable>
 
           <View style={styles.dotRow}>
@@ -112,6 +119,28 @@ const styles = StyleSheet.create({
     height: "33%",
     backgroundColor: "rgba(4, 9, 18, 0.66)",
   },
+  leftVignette: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: "22%",
+  },
+  rightVignette: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: "22%",
+  },
+  bottomFocus: {
+    position: "absolute",
+    left: -12,
+    right: -12,
+    bottom: -50,
+    height: "34%",
+    borderRadius: 220,
+  },
   content: {
     paddingHorizontal: 12,
     paddingBottom: 20,
@@ -123,6 +152,9 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 0.1,
     maxWidth: 280,
+    textShadowColor: "rgba(0, 0, 0, 0.5)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 10,
   },
   description: {
     marginTop: 10,
@@ -130,14 +162,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     maxWidth: 315,
+    textShadowColor: "rgba(0, 0, 0, 0.35)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
   ctaBtn: {
     marginTop: 16,
     minHeight: 52,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#1f65c07f",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#0749a5",
+    shadowColor: "#02214a",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.34,
+    shadowRadius: 14,
+    elevation: 7,
   },
   ctaText: {
     color: "#eaf3ff",

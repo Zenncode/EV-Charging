@@ -13,6 +13,7 @@ export function StartStep2({ onNext }: StartStepProps) {
       description="View available charging stations in real time, check availability, and get direction to the nearest one."
       backgroundUri={getImage("onboarding", "step2")}
       blackOverlayPercent={40}
+      ctaLabel="Next"
       onPress={onNext}
     />
   );
