@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import MapView, { Callout, Circle, Marker, Region } from "react-native-maps";
+import { ReserveSlotModal, SlotBookingSelection } from "../components/ui/ReserveSlotModal";
 import { StationCard } from "../components/ui/StationCard";
 import { chargingStations } from "../data/stations";
 import { colors } from "../theme";
@@ -63,7 +64,6 @@ export function MapScreen({
   const [region, setRegion] = useState<Region>(defaultRegion);
   const [userCoord, setUserCoord] = useState<{ latitude: number; longitude: number } | null>(null);
   const [reserveStation, setReserveStation] = useState<ChargingStation | null>(null);
-  const [reserveName, setReserveName] = useState("");
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isSheetHidden, setIsSheetHidden] = useState(false);
 
@@ -202,25 +202,14 @@ export function MapScreen({
     });
   };
 
-  const submitReservation = () => {
+  const submitReservation = (selection: SlotBookingSelection) => {
     if (!reserveStation) return;
-
-    const value = reserveName.trim();
-    if (!value) {
-      onToast({
-        title: "Name required",
-        message: "Enter the reserver name before adding.",
-        tone: "warning",
-      });
-      return;
-    }
-
-    onCreateReservation(reserveStation.id, value);
-    setReserveName("");
+    const slotLabel = `${selection.dateLabel} • ${selection.timeLabel}`;
+    onCreateReservation(reserveStation.id, slotLabel);
     setReserveStation(null);
     onToast({
       title: "Reservation added",
-      message: `Saved reservation for ${reserveStation.name}.`,
+      message: `${reserveStation.name} at ${selection.timeLabel} on ${selection.dateLabel}.`,
       tone: "success",
     });
   };
@@ -529,79 +518,13 @@ export function MapScreen({
         </View>
       </Modal>
 
-      <Modal
+      <ReserveSlotModal
         visible={reserveStation !== null}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setReserveStation(null)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeaderRow}>
-              <View>
-                <Text style={styles.modalTitle}>Reserve Spot</Text>
-                <Text style={styles.modalSub}>Nearby Station Booking</Text>
-              </View>
-              <Pressable style={styles.modalCloseBtn} onPress={() => setReserveStation(null)}>
-                <MaterialCommunityIcons name="close" size={16} color={colors.textMuted} />
-              </Pressable>
-            </View>
-
-            {reserveStation ? (
-              <View style={styles.stationPreview}>
-                <Text style={styles.stationPreviewName}>{reserveStation.name}</Text>
-                <Text style={styles.stationPreviewAddress}>{reserveStation.address}</Text>
-                <View style={styles.stationMetaRow}>
-                  <View style={styles.stationMetaChip}>
-                    <MaterialCommunityIcons name="ev-station" size={13} color={colors.emerald} />
-                    <Text style={styles.stationMetaText}>
-                      {reserveStation.availableChargers}/{reserveStation.totalChargers} available
-                    </Text>
-                  </View>
-                  <View style={styles.stationMetaChip}>
-                    <MaterialCommunityIcons name="cash" size={13} color={colors.cyan} />
-                    <Text style={styles.stationMetaText}>PHP {reserveStation.price.toFixed(1)}/kWh</Text>
-                  </View>
-                </View>
-              </View>
-            ) : null}
-
-            <View style={styles.modalInputWrap}>
-              <MaterialCommunityIcons name="account-outline" size={16} color={colors.textMuted} />
-              <TextInput
-                value={reserveName}
-                onChangeText={setReserveName}
-                placeholder="Enter reserver name"
-                placeholderTextColor={colors.textMuted}
-                style={styles.modalInput}
-              />
-            </View>
-
-            {reserveStation && (reservationsByStation[reserveStation.id]?.length ?? 0) > 0 ? (
-              <View style={styles.reservationList}>
-                <Text style={styles.resListTitle}>Current Queue</Text>
-                {reservationsByStation[reserveStation.id].slice(-4).map((entry) => (
-                  <View key={entry.id} style={styles.resItemRow}>
-                    <View style={styles.resDot} />
-                    <Text style={styles.resItem}>{entry.reservedBy}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : null}
-            <View style={styles.modalActions}>
-              <Pressable style={[styles.modalBtn, styles.modalCancel]} onPress={() => setReserveStation(null)}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.modalBtn, styles.modalConfirm, !reserveName.trim() && styles.modalConfirmDisabled]}
-                onPress={submitReservation}
-              >
-                <Text style={styles.modalConfirmText}>Confirm Reservation</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        station={reserveStation}
+        queue={reserveStation ? reservationsByStation[reserveStation.id] ?? [] : []}
+        onClose={() => setReserveStation(null)}
+        onConfirm={submitReservation}
+      />
     </View>
   );
 }

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { ReserveSlotModal, SlotBookingSelection } from "../components/ui/ReserveSlotModal";
 import { StationCard } from "../components/ui/StationCard";
 import { chargingStations } from "../data/stations";
 import { colors } from "../theme";
@@ -27,29 +28,17 @@ export function FavoritesScreen({
   onToast,
 }: FavoritesScreenProps) {
   const [reserveStation, setReserveStation] = useState<ChargingStation | null>(null);
-  const [reserveName, setReserveName] = useState("");
 
   const favorites = chargingStations.filter((station) => favoriteIds.includes(station.id));
 
-  const submitReservation = () => {
+  const submitReservation = (selection: SlotBookingSelection) => {
     if (!reserveStation) return;
-    const value = reserveName.trim();
-
-    if (!value) {
-      onToast({
-        title: "Name required",
-        message: "Enter the reserver name before saving.",
-        tone: "warning",
-      });
-      return;
-    }
-
-    onCreateReservation(reserveStation.id, value);
-    setReserveName("");
+    const slotLabel = `${selection.dateLabel} • ${selection.timeLabel}`;
+    onCreateReservation(reserveStation.id, slotLabel);
     setReserveStation(null);
     onToast({
       title: "Reservation added",
-      message: `Saved reservation for ${reserveStation.name}.`,
+      message: `${reserveStation.name} at ${selection.timeLabel} on ${selection.dateLabel}.`,
       tone: "success",
     });
   };
@@ -91,34 +80,13 @@ export function FavoritesScreen({
         />
       )}
 
-      <Modal
+      <ReserveSlotModal
         visible={reserveStation !== null}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setReserveStation(null)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Reserve Favorite Station</Text>
-            <Text style={styles.modalSub}>{reserveStation?.name}</Text>
-            <TextInput
-              value={reserveName}
-              onChangeText={setReserveName}
-              placeholder="Name of reserver"
-              placeholderTextColor={colors.textMuted}
-              style={styles.modalInput}
-            />
-            <View style={styles.modalActions}>
-              <Pressable style={[styles.modalBtn, styles.modalCancel]} onPress={() => setReserveStation(null)}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </Pressable>
-              <Pressable style={[styles.modalBtn, styles.modalConfirm]} onPress={submitReservation}>
-                <Text style={styles.modalConfirmText}>Save</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        station={reserveStation}
+        queue={reserveStation ? reservationsByStation[reserveStation.id] ?? [] : []}
+        onClose={() => setReserveStation(null)}
+        onConfirm={submitReservation}
+      />
     </View>
   );
 }
