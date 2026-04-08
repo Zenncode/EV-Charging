@@ -56,6 +56,7 @@ export function MapScreen({
   const [connectorFilter, setConnectorFilter] = useState<"All" | ConnectorType>("All");
   const [availableOnly, setAvailableOnly] = useState(false);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [draftSortByNearest, setDraftSortByNearest] = useState(true);
   const [draftSpeedFilter, setDraftSpeedFilter] = useState<"All" | ChargingSpeed>("All");
   const [draftConnectorFilter, setDraftConnectorFilter] = useState<"All" | ConnectorType>("All");
   const [draftAvailableOnly, setDraftAvailableOnly] = useState(false);
@@ -104,10 +105,11 @@ export function MapScreen({
     filteredStations.length > 0
       ? filteredStations.reduce((sum, station) => sum + station.price, 0) / filteredStations.length
       : 0;
-  const hasActiveFilters =
-    Boolean(search.trim()) || speedFilter !== "All" || connectorFilter !== "All" || availableOnly || !sortByNearest;
   const activeFilterCount =
-    (speedFilter !== "All" ? 1 : 0) + (connectorFilter !== "All" ? 1 : 0) + (availableOnly ? 1 : 0);
+    (speedFilter !== "All" ? 1 : 0) +
+    (connectorFilter !== "All" ? 1 : 0) +
+    (availableOnly ? 1 : 0) +
+    (!sortByNearest ? 1 : 0);
 
   const resetFilters = () => {
     setSearch("");
@@ -118,6 +120,7 @@ export function MapScreen({
   };
 
   const openFilterModal = () => {
+    setDraftSortByNearest(sortByNearest);
     setDraftSpeedFilter(speedFilter);
     setDraftConnectorFilter(connectorFilter);
     setDraftAvailableOnly(availableOnly);
@@ -129,6 +132,7 @@ export function MapScreen({
   };
 
   const applyFilters = () => {
+    setSortByNearest(draftSortByNearest);
     setSpeedFilter(draftSpeedFilter);
     setConnectorFilter(draftConnectorFilter);
     setAvailableOnly(draftAvailableOnly);
@@ -136,9 +140,16 @@ export function MapScreen({
   };
 
   const resetDraftFilters = () => {
+    setDraftSortByNearest(true);
     setDraftSpeedFilter("All");
     setDraftConnectorFilter("All");
     setDraftAvailableOnly(false);
+  };
+
+  const resetAllFiltersFromModal = () => {
+    resetFilters();
+    resetDraftFilters();
+    setIsFilterModalOpen(false);
   };
 
   const requestLocation = async () => {
@@ -346,43 +357,6 @@ export function MapScreen({
           </Pressable>
         </View>
 
-        <View style={styles.controlsRow}>
-          <Pressable
-            style={[styles.controlBtn, styles.sortBtn]}
-            onPress={() => setSortByNearest((prev) => !prev)}
-          >
-            <MaterialCommunityIcons
-              name={sortByNearest ? "sort-ascending" : "sort-descending"}
-              size={14}
-              color={colors.cyan}
-            />
-            <Text style={styles.controlBtnText}>{sortByNearest ? "Nearest" : "Farthest"}</Text>
-          </Pressable>
-
-          <Pressable
-            style={[styles.controlBtn, !hasActiveFilters && styles.controlBtnDisabled]}
-            disabled={!hasActiveFilters}
-            onPress={resetFilters}
-          >
-            <MaterialCommunityIcons name="filter-remove-outline" size={14} color={colors.textMuted} />
-            <Text style={styles.controlBtnText}>Reset</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryChip}>
-            Showing {filteredStations.length} stations ({availableCount} available)
-          </Text>
-          <Text style={styles.summaryChip}>Avg PHP {avgRate.toFixed(1)}/kWh</Text>
-          <Text style={styles.summaryChip}>
-            {speedFilter === "All" ? "All speeds" : speedFilter} |{" "}
-            {connectorFilter === "All" ? "All connectors" : connectorFilter}
-          </Text>
-          {availableOnly ? <Text style={styles.summaryChip}>Available only</Text> : null}
-        </View>
-        {filteredStations.length === 0 ? (
-          <Text style={styles.emptyFilterText}>No stations match your current filters.</Text>
-        ) : null}
         {locationError ? <Text style={styles.errorText}>{locationError}</Text> : null}
       </View>
 
@@ -402,6 +376,20 @@ export function MapScreen({
           <Text style={styles.sheetTitle}>Nearby Stations ({filteredStations.length})</Text>
           {activeSession ? <Text style={styles.liveTag}>Session Live</Text> : null}
         </View>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryChip}>
+            Showing {filteredStations.length} stations ({availableCount} available)
+          </Text>
+          <Text style={styles.summaryChip}>Avg PHP {avgRate.toFixed(1)}/kWh</Text>
+          <Text style={styles.summaryChip}>
+            {speedFilter === "All" ? "All speeds" : speedFilter} |{" "}
+            {connectorFilter === "All" ? "All connectors" : connectorFilter}
+          </Text>
+          {availableOnly ? <Text style={styles.summaryChip}>Available only</Text> : null}
+        </View>
+        {filteredStations.length === 0 ? (
+          <Text style={styles.emptyFilterText}>No stations match your current filters.</Text>
+        ) : null}
         <FlatList
           data={filteredStations}
           keyExtractor={(item) => item.id}
@@ -411,30 +399,23 @@ export function MapScreen({
             const hasDifferentActiveSession = activeSession ? activeSession.stationId !== item.id : false;
 
             return (
-              <View style={styles.listItemWrap}>
-                <StationCard
-                  station={item}
-                  isFavorite={favoriteIds.includes(item.id)}
-                  onToggleFavorite={onToggleFavorite}
-                  onReserve={() => setReserveStation(item)}
-                  onStartSession={onStartSession}
-                  reservationCount={reservationsByStation[item.id]?.length ?? 0}
-                  startDisabled={isUnavailable || hasDifferentActiveSession}
-                  startDisabledText={
-                    isUnavailable
-                      ? "No free charger at this station."
-                      : hasDifferentActiveSession
-                        ? "Stop your current session first."
-                        : undefined
-                  }
-                />
-                <View style={styles.cardActionsRow}>
-                  <Pressable style={styles.navBtn} onPress={() => openNavigation(item)}>
-                    <MaterialCommunityIcons name="navigation-variant-outline" size={16} color={colors.cyan} />
-                    <Text style={styles.navText}>Navigate</Text>
-                  </Pressable>
-                </View>
-              </View>
+              <StationCard
+                station={item}
+                isFavorite={favoriteIds.includes(item.id)}
+                onToggleFavorite={onToggleFavorite}
+                onReserve={() => setReserveStation(item)}
+                onNavigate={openNavigation}
+                onStartSession={onStartSession}
+                reservationCount={reservationsByStation[item.id]?.length ?? 0}
+                startDisabled={isUnavailable || hasDifferentActiveSession}
+                startDisabledText={
+                  isUnavailable
+                    ? "No free charger at this station."
+                    : hasDifferentActiveSession
+                      ? "Stop your current session first."
+                      : undefined
+                }
+              />
             );
           }}
           ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
@@ -497,6 +478,26 @@ export function MapScreen({
               })}
             </View>
 
+            <Text style={styles.filterLabel}>Sort By</Text>
+            <View style={styles.filterWrap}>
+              <Pressable
+                style={[styles.filterChip, draftSortByNearest && styles.filterChipActive]}
+                onPress={() => setDraftSortByNearest(true)}
+              >
+                <Text style={[styles.filterChipText, draftSortByNearest && styles.filterChipTextActive]}>
+                  Nearest
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[styles.filterChip, !draftSortByNearest && styles.filterChipActive]}
+                onPress={() => setDraftSortByNearest(false)}
+              >
+                <Text style={[styles.filterChipText, !draftSortByNearest && styles.filterChipTextActive]}>
+                  Farthest
+                </Text>
+              </Pressable>
+            </View>
+
             <Pressable
               style={[styles.availabilityToggle, draftAvailableOnly && styles.availabilityToggleActive]}
               onPress={() => setDraftAvailableOnly((prev) => !prev)}
@@ -517,7 +518,7 @@ export function MapScreen({
             </Pressable>
 
             <View style={styles.modalActions}>
-              <Pressable style={[styles.modalBtn, styles.modalCancel]} onPress={resetDraftFilters}>
+              <Pressable style={[styles.modalBtn, styles.modalCancel]} onPress={resetAllFiltersFromModal}>
                 <Text style={styles.modalCancelText}>Reset</Text>
               </Pressable>
               <Pressable style={[styles.modalBtn, styles.modalConfirm]} onPress={applyFilters}>
@@ -630,6 +631,11 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   overlayTop: {
+    marginHorizontal: 10,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
     paddingTop: 14,
     paddingHorizontal: 14,
     paddingBottom: 10,
@@ -715,42 +721,6 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.text,
     fontSize: 14,
-  },
-  controlsRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  controlBtn: {
-    flex: 1,
-    minHeight: 36,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: "#081727",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 5,
-    paddingHorizontal: 8,
-  },
-  sortBtn: {
-    borderColor: "#31d4f55c",
-    backgroundColor: "#31d4f51c",
-  },
-  controlBtnActive: {
-    borderColor: "#24d6a066",
-    backgroundColor: "#24d6a023",
-  },
-  controlBtnDisabled: {
-    opacity: 0.5,
-  },
-  controlBtnText: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  controlBtnTextActive: {
-    color: colors.emerald,
   },
   filterLabel: {
     marginTop: 2,
@@ -861,29 +831,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 24,
-  },
-  listItemWrap: {
-    gap: 8,
-  },
-  cardActionsRow: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-  },
-  navBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    borderWidth: 1,
-    borderColor: "#22d3ee66",
-    borderRadius: 10,
-    paddingHorizontal: 9,
-    paddingVertical: 6,
-    backgroundColor: "#22d3ee1a",
-  },
-  navText: {
-    color: colors.cyan,
-    fontSize: 12,
-    fontWeight: "700",
   },
   revealSheetBtn: {
     position: "absolute",

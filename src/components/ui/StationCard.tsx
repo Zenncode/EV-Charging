@@ -8,6 +8,7 @@ interface StationCardProps {
   isFavorite: boolean;
   onToggleFavorite: (id: string) => void;
   onReserve: (station: ChargingStation) => void;
+  onNavigate?: (station: ChargingStation) => void;
   onStartSession?: (station: ChargingStation) => void;
   reservationCount?: number;
   startDisabled?: boolean;
@@ -19,6 +20,7 @@ export function StationCard({
   isFavorite,
   onToggleFavorite,
   onReserve,
+  onNavigate,
   onStartSession,
   reservationCount = 0,
   startDisabled = false,
@@ -85,6 +87,11 @@ export function StationCard({
         <Pressable style={[styles.actionBtn, styles.reserveBtn]} onPress={() => onReserve(station)}>
           <Text style={styles.reserveText}>Reserve</Text>
         </Pressable>
+        {onNavigate ? (
+          <Pressable style={[styles.actionBtn, styles.navigateBtn]} onPress={() => onNavigate(station)}>
+            <Text style={styles.navigateText}>Navigate</Text>
+          </Pressable>
+        ) : null}
         {onStartSession ? (
           <Pressable
             disabled={startDisabled}
@@ -227,6 +234,11 @@ const styles = StyleSheet.create({
     borderColor: "#fbbf24aa",
     backgroundColor: "#f59e0b1f",
   },
+  navigateBtn: {
+    borderWidth: 1,
+    borderColor: "#22d3ee66",
+    backgroundColor: "#22d3ee1a",
+  },
   startBtn: {
     borderWidth: 1,
     borderColor: "#34d399aa",
@@ -238,6 +250,10 @@ const styles = StyleSheet.create({
   },
   reserveText: {
     color: "#fbbf24",
+    fontWeight: "700",
+  },
+  navigateText: {
+    color: colors.cyan,
     fontWeight: "700",
   },
   startText: {
