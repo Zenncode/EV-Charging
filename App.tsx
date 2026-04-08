@@ -17,9 +17,11 @@ import { carModels } from "./src/data/cars";
 import { chargingStations } from "./src/data/stations";
 import { FavoritesScreen } from "./src/screens/FavoritesScreen";
 import { HomeScreen } from "./src/screens/HomeScreen";
+import { LoginScreen } from "./src/screens/LoginScreen";
 import { MapScreen } from "./src/screens/MapScreen";
 import { ProfileScreen } from "./src/screens/ProfileScreen";
 import { SessionScreen } from "./src/screens/SessionScreen";
+import { StartStep1, StartStep2, StartStep3 } from "./src/screens/start";
 import { getSessionSnapshot } from "./src/sessionMetrics";
 import { colors } from "./src/theme";
 import {
@@ -41,6 +43,7 @@ const STORAGE_KEYS = {
   sessionHistory: "uzaro:sessionHistory",
 } as const;
 const SESSION_AUTH_AMOUNT = 150;
+type EntryScreenKey = "StartStep1" | "StartStep2" | "StartStep3" | "Login" | "App";
 
 function parseJson<T>(raw: string | null, fallback: T): T {
   if (!raw) return fallback;
@@ -53,6 +56,7 @@ function parseJson<T>(raw: string | null, fallback: T): T {
 
 export default function App() {
   const [isReady, setIsReady] = useState(false);
+  const [entryScreen, setEntryScreen] = useState<EntryScreenKey>("StartStep1");
   const [activeTab, setActiveTab] = useState<TabKey>("Home");
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [walletBalance, setWalletBalance] = useState(1250);
@@ -279,6 +283,7 @@ export default function App() {
     setSessionHistory([]);
     setPaymentStation(null);
     setActiveTab("Home");
+    setEntryScreen("Login");
     AsyncStorage.multiRemove([
       STORAGE_KEYS.favorites,
       STORAGE_KEYS.activeSession,
@@ -293,6 +298,20 @@ export default function App() {
         <StatusBar style="light" />
         <Text style={styles.loadingText}>Preparing Electric Uzaro Mobile...</Text>
       </SafeAreaView>
+    );
+  }
+
+  if (entryScreen !== "App") {
+    return (
+      <View style={styles.entryRoot}>
+        <StatusBar style="light" />
+        <View style={styles.entryScreen}>
+          {entryScreen === "StartStep1" ? <StartStep1 onNext={() => setEntryScreen("StartStep2")} /> : null}
+          {entryScreen === "StartStep2" ? <StartStep2 onNext={() => setEntryScreen("StartStep3")} /> : null}
+          {entryScreen === "StartStep3" ? <StartStep3 onNext={() => setEntryScreen("Login")} /> : null}
+          {entryScreen === "Login" ? <LoginScreen onSignIn={() => setEntryScreen("App")} /> : null}
+        </View>
+      </View>
     );
   }
 
@@ -432,6 +451,13 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.bg,
+  },
+  entryRoot: {
+    flex: 1,
+    backgroundColor: "#04070d",
+  },
+  entryScreen: {
+    flex: 1,
   },
   screen: {
     flex: 1,
