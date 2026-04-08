@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useEffect, useMemo, useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { colors } from "../../theme";
-import { ChargingStation, ChargingSpeed, ReservationEntry } from "../../types";
+import { ChargingSpeed, ChargingStation, ReservationEntry } from "../../types";
 
 export interface SlotBookingSelection {
   dateLabel: string;
@@ -20,7 +20,6 @@ interface ReserveSlotModalProps {
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
-
 const TIME_SLOTS = [
   "12:00 AM",
   "2:00 AM",
@@ -152,7 +151,7 @@ export function ReserveSlotModal({ visible, station, queue, onClose, onConfirm }
                   >
                     <Text style={[styles.timeChipText, active && styles.timeChipTextActive]}>
                       {slot}
-                      {active && recommended ? "  ⭐" : ""}
+                      {active && recommended ? " *" : ""}
                     </Text>
                   </Pressable>
                 );
@@ -170,8 +169,8 @@ export function ReserveSlotModal({ visible, station, queue, onClose, onConfirm }
               <View style={styles.summaryRow}>
                 <MaterialCommunityIcons name="clock-time-four-outline" size={14} color={colors.cyan} />
                 <Text style={styles.summaryMain}>{selectedTime}</Text>
-                <Text style={styles.summarySub}>• {connector}</Text>
-                <Text style={styles.summarySub}>• {chargerType}</Text>
+                <Text style={styles.summarySub}>| {connector}</Text>
+                <Text style={styles.summarySub}>| {chargerType}</Text>
               </View>
             </View>
             {queue.length > 0 ? (
@@ -187,7 +186,7 @@ export function ReserveSlotModal({ visible, station, queue, onClose, onConfirm }
                 })
               }
             >
-              <Text style={styles.confirmBtnText}>Confirm Booking • {selectedTime}</Text>
+              <Text style={styles.confirmBtnText}>Confirm Booking | {selectedTime}</Text>
             </Pressable>
           </View>
         </View>
@@ -199,7 +198,7 @@ export function ReserveSlotModal({ visible, station, queue, onClose, onConfirm }
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(2, 6, 23, 0.78)",
+    backgroundColor: "rgba(2, 6, 23, 0.82)",
     justifyContent: "flex-end",
   },
   sheet: {
@@ -207,7 +206,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 22,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: "#d6dae3",
+    backgroundColor: "#0b1624",
     paddingHorizontal: 12,
     paddingTop: 10,
     paddingBottom: 18,
@@ -228,7 +227,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#124a99",
+    backgroundColor: "#0f3f83",
   },
   headerTitle: {
     color: "#f1f6ff",
@@ -242,21 +241,21 @@ const styles = StyleSheet.create({
   block: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#c3c9d4",
-    backgroundColor: "#e2e5ea",
+    borderColor: colors.border,
+    backgroundColor: "#101f32",
     padding: 10,
     gap: 8,
   },
   blockTitle: {
-    color: "#3f4f68",
+    color: colors.text,
     fontSize: 16,
     fontWeight: "800",
   },
   settingItem: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#c6ccd6",
-    backgroundColor: "#ebedf2",
+    borderColor: colors.border,
+    backgroundColor: "#14263c",
     minHeight: 44,
     paddingHorizontal: 10,
     flexDirection: "row",
@@ -273,12 +272,12 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: "#dbe8fb",
+    backgroundColor: "#0c1c2f",
     alignItems: "center",
     justifyContent: "center",
   },
   settingLabel: {
-    color: "#334155",
+    color: colors.textSoft,
     fontSize: 13,
     fontWeight: "700",
   },
@@ -288,14 +287,14 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   settingValue: {
-    color: "#334155",
+    color: colors.text,
     fontSize: 13,
     fontWeight: "800",
   },
   settingDivider: {
     marginVertical: 2,
     height: 1,
-    backgroundColor: "#d4dae5",
+    backgroundColor: colors.border,
   },
   dateRow: {
     flexDirection: "row",
@@ -306,8 +305,8 @@ const styles = StyleSheet.create({
     minHeight: 58,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#c6ccd6",
-    backgroundColor: "#f0f2f7",
+    borderColor: colors.border,
+    backgroundColor: "#15273d",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 5,
@@ -318,7 +317,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#376dcb",
   },
   dateWeek: {
-    color: "#4b5563",
+    color: colors.textMuted,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -326,7 +325,7 @@ const styles = StyleSheet.create({
     color: "#edf4ff",
   },
   dateMain: {
-    color: "#334155",
+    color: colors.textSoft,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -335,7 +334,7 @@ const styles = StyleSheet.create({
   },
   timeLabel: {
     marginTop: 4,
-    color: "#3f4f68",
+    color: colors.text,
     fontSize: 16,
     fontWeight: "800",
   },
@@ -349,8 +348,8 @@ const styles = StyleSheet.create({
     minHeight: 36,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#c6ccd6",
-    backgroundColor: "#e9ecf2",
+    borderColor: colors.border,
+    backgroundColor: "#15273d",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 6,
@@ -364,7 +363,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#49bc7a",
   },
   timeChipText: {
-    color: "#475569",
+    color: colors.textMuted,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -374,8 +373,8 @@ const styles = StyleSheet.create({
   summaryCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#c6ccd6",
-    backgroundColor: "#ebedf2",
+    borderColor: colors.border,
+    backgroundColor: "#14263c",
     paddingHorizontal: 10,
     paddingVertical: 8,
     gap: 7,
@@ -387,17 +386,17 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   summaryMain: {
-    color: "#334155",
+    color: colors.text,
     fontSize: 14,
     fontWeight: "800",
   },
   summarySub: {
-    color: "#64748b",
+    color: colors.textMuted,
     fontSize: 13,
     fontWeight: "600",
   },
   queueHint: {
-    color: "#566477",
+    color: colors.textMuted,
     fontSize: 12,
     fontWeight: "600",
   },

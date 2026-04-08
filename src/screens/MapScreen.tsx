@@ -100,11 +100,6 @@ export function MapScreen({
     return list.sort((a, b) => (sortByNearest ? a.distance - b.distance : b.distance - a.distance));
   }, [availableOnly, connectorFilter, search, sortByNearest, speedFilter]);
 
-  const availableCount = filteredStations.filter((station) => station.availableChargers > 0).length;
-  const avgRate =
-    filteredStations.length > 0
-      ? filteredStations.reduce((sum, station) => sum + station.price, 0) / filteredStations.length
-      : 0;
   const activeFilterCount =
     (speedFilter !== "All" ? 1 : 0) +
     (connectorFilter !== "All" ? 1 : 0) +
@@ -364,17 +359,6 @@ export function MapScreen({
         <View style={styles.sheetTitleRow}>
           <Text style={styles.sheetTitle}>Nearby Stations ({filteredStations.length})</Text>
           {activeSession ? <Text style={styles.liveTag}>Session Live</Text> : null}
-        </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryChip}>
-            Showing {filteredStations.length} stations ({availableCount} available)
-          </Text>
-          <Text style={styles.summaryChip}>Avg PHP {avgRate.toFixed(1)}/kWh</Text>
-          <Text style={styles.summaryChip}>
-            {speedFilter === "All" ? "All speeds" : speedFilter} |{" "}
-            {connectorFilter === "All" ? "All connectors" : connectorFilter}
-          </Text>
-          {availableOnly ? <Text style={styles.summaryChip}>Available only</Text> : null}
         </View>
         {filteredStations.length === 0 ? (
           <Text style={styles.emptyFilterText}>No stations match your current filters.</Text>
@@ -679,23 +663,6 @@ const styles = StyleSheet.create({
   },
   filterChipTextActive: {
     color: colors.text,
-  },
-  summaryRow: {
-    marginTop: 2,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  summaryChip: {
-    borderRadius: 99,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: "#102233",
-    color: colors.textSoft,
-    fontSize: 11,
-    fontWeight: "600",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
   },
   emptyFilterText: {
     color: colors.amber,
