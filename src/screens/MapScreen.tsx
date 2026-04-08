@@ -14,7 +14,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import MapView, { Callout, Circle, Marker, Region } from "react-native-maps";
+import MapView, { Circle, Marker, Region } from "react-native-maps";
 import { ReserveSlotModal, SlotBookingSelection } from "../components/ui/ReserveSlotModal";
 import { StationCard } from "../components/ui/StationCard";
 import { chargingStations } from "../data/stations";
@@ -209,6 +209,9 @@ export function MapScreen({
     });
   };
 
+  const getMarkerDescription = (station: ChargingStation) =>
+    `${station.address}\n${station.speed} speed | ${station.maxPower}kW | ${station.availableChargers}/${station.totalChargers} available`;
+
   const showSheet = () => {
     setIsSheetHidden(false);
     Animated.spring(sheetTranslateY, {
@@ -276,16 +279,10 @@ export function MapScreen({
           <Marker
             key={station.id}
             coordinate={{ latitude: station.lat, longitude: station.lng }}
+            title={station.name}
+            description={getMarkerDescription(station)}
             pinColor={station.availableChargers > 0 ? "#10b981" : "#f97316"}
-          >
-            <Callout onPress={() => setReserveStation(station)}>
-              <View style={styles.callout}>
-                <Text style={styles.calloutTitle}>{station.name}</Text>
-                <Text style={styles.calloutAddress}>{station.address}</Text>
-                <Text style={styles.calloutHint}>Tap to reserve this station</Text>
-              </View>
-            </Callout>
-          </Marker>
+          />
         ))}
 
         {userCoord ? (
@@ -517,25 +514,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
-  },
-  callout: {
-    width: 190,
-    paddingVertical: 2,
-  },
-  calloutTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  calloutAddress: {
-    marginTop: 3,
-    fontSize: 12,
-    color: "#334155",
-  },
-  calloutHint: {
-    marginTop: 4,
-    fontSize: 11,
-    color: "#0f766e",
-    fontWeight: "600",
   },
   overlayTop: {
     marginHorizontal: 10,
