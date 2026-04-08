@@ -5,6 +5,7 @@ interface StartStepLayoutProps {
   title: string;
   description: string;
   backgroundUri: string | null;
+  blackOverlayPercent: number;
   onPress: () => void;
 }
 
@@ -13,8 +14,13 @@ export function StartStepLayout({
   title,
   description,
   backgroundUri,
+  blackOverlayPercent,
   onPress,
 }: StartStepLayoutProps) {
+  const safePercent = Math.max(0, Math.min(100, blackOverlayPercent));
+  const topAlpha = Math.min(0.85, safePercent / 100 / 2);
+  const bottomAlpha = Math.min(0.96, safePercent / 100);
+
   return (
     <View style={styles.container}>
       <ImageBackground
@@ -23,8 +29,8 @@ export function StartStepLayout({
         style={styles.background}
         imageStyle={styles.image}
       >
-        <View style={styles.topDim} />
-        <View style={styles.bottomDim} />
+        <View style={[styles.topDim, { backgroundColor: `rgba(0, 0, 0, ${topAlpha})` }]} />
+        <View style={[styles.bottomDim, { backgroundColor: `rgba(0, 0, 0, ${bottomAlpha})` }]} />
 
         <View style={styles.content}>
           <Text style={styles.title}>{title}</Text>

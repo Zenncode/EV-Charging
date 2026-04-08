@@ -12,6 +12,7 @@ export function StartStep3({ onNext }: StartStepProps) {
       title={"Smart Charging,\nSeamless\nTravel"}
       description="Locate the nearest Sapphire Network charging stations instantly. Keep your drive smooth and your battery full."
       backgroundUri={getImage("onboarding", "step3")}
+      blackOverlayPercent={60}
       onPress={onNext}
     />
   );

@@ -109,7 +109,7 @@ export function LoginScreen({ onSignIn }: LoginScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#04070d",
+    backgroundColor: "#000000",
     paddingHorizontal: 20,
     paddingTop: 54,
     paddingBottom: 20,
