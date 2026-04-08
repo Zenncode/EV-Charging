@@ -14,6 +14,19 @@ interface HomeScreenProps {
   onSelectTab: (tab: TabKey) => void;
 }
 
+function formatShortDate(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "Unknown";
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good Morning";
+  if (hour < 18) return "Good Afternoon";
+  return "Good Evening";
+}
+
 export function HomeScreen({
   selectedCarId,
   activeSession,
@@ -34,36 +47,69 @@ export function HomeScreen({
   const currentMonthEntries = sessionHistory.filter((entry) => entry.endedAt.slice(0, 7) === monthKey);
   const monthEnergy = currentMonthEntries.reduce((sum, entry) => sum + entry.energyAddedKwh, 0);
   const monthCost = currentMonthEntries.reduce((sum, entry) => sum + entry.estimatedCost, 0);
+  const monthAvgCost = currentMonthEntries.length > 0 ? monthCost / currentMonthEntries.length : 0;
   const latestSession = sessionHistory[0];
 
   const selectedCar: CarModel = carModels.find((car) => car.id === selectedCarId) ?? carModels[0];
+  const greeting = getGreeting();
 
-  const cards: {
+  const quickActions: Array<{
     label: string;
     subtitle: string;
     icon: keyof typeof MaterialCommunityIcons.glyphMap;
     tab: TabKey;
-  }[] = [
-    { label: "Open Maps", subtitle: "Find nearby chargers", icon: "map-marker-path", tab: "Maps" },
-    { label: "Favorites", subtitle: "Saved stations", icon: "heart-outline", tab: "Favorites" },
-    { label: "Session", subtitle: "Track charging", icon: "lightning-bolt-outline", tab: "Session" },
-    { label: "Profile", subtitle: "Wallet and settings", icon: "account-outline", tab: "Profile" },
+    color: string;
+    tint: string;
+  }> = [
+    {
+      label: "Explore Map",
+      subtitle: "Discover chargers near you",
+      icon: "map-search-outline",
+      tab: "Maps",
+      color: colors.cyan,
+      tint: "#22d3ee1d",
+    },
+    {
+      label: "Saved Stations",
+      subtitle: "Your favorite charging spots",
+      icon: "heart-multiple-outline",
+      tab: "Favorites",
+      color: "#fb7185",
+      tint: "#fb71851a",
+    },
+    {
+      label: "Live Session",
+      subtitle: activeSession ? "Monitor charging now" : "No active charge yet",
+      icon: "lightning-bolt-outline",
+      tab: "Session",
+      color: colors.emerald,
+      tint: "#10b9811b",
+    },
+    {
+      label: "Account Hub",
+      subtitle: "Wallet, EV profile, settings",
+      icon: "account-cog-outline",
+      tab: "Profile",
+      color: colors.amber,
+      tint: "#f59e0b1e",
+    },
   ];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.hero}>
-        <View style={styles.heroGlowLarge} />
-        <View style={styles.heroGlowSmall} />
+        <View style={styles.heroGlowA} />
+        <View style={styles.heroGlowB} />
+
         <View style={styles.heroTopRow}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.kicker}>Electric Uzaro Control</Text>
-            <Text style={styles.title}>Charge Smarter, Drive Longer</Text>
-            <Text style={styles.subtitle}>Live data, quick actions, and better charging choices.</Text>
+            <Text style={styles.title}>{greeting}, Juan</Text>
+            <Text style={styles.subtitle}>Charge smarter and keep every trip ready.</Text>
           </View>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>EU</Text>
-          </View>
+          <Pressable style={styles.heroMapBtn} onPress={() => onSelectTab("Maps")}>
+            <MaterialCommunityIcons name="map-marker-radius-outline" size={19} color={colors.cyan} />
+          </Pressable>
         </View>
 
         <View style={styles.heroMetricsRow}>
@@ -80,47 +126,83 @@ export function HomeScreen({
             <Text style={styles.heroMetricText}>{queuedReservations} queued</Text>
           </View>
         </View>
+
+        <View style={styles.heroBottomRow}>
+          <View style={styles.linkedCarPill}>
+            <MaterialCommunityIcons name="car-electric" size={14} color={colors.emerald} />
+            <Text style={styles.linkedCarText}>{selectedCar.displayName}</Text>
+          </View>
+          <Pressable
+            style={styles.heroPrimaryBtn}
+            onPress={() => onSelectTab(activeSession ? "Session" : "Maps")}
+          >
+            <Text style={styles.heroPrimaryBtnText}>{activeSession ? "Open Session" : "Start Charging"}</Text>
+          </Pressable>
+        </View>
       </View>
 
-      <View style={styles.carCard}>
-        <View style={styles.carGlow} />
-        <MaterialCommunityIcons name="car-electric" size={56} color={colors.emerald} />
-        <Text style={styles.carTitle}>{selectedCar.displayName}</Text>
-        <Text style={styles.carSub}>Linked EV profile</Text>
+      <View style={styles.dualInfoRow}>
+        {nearest ? (
+          <Pressable style={styles.infoCard} onPress={() => onSelectTab("Maps")}>
+            <View style={styles.infoCardTitleRow}>
+              <MaterialCommunityIcons name="crosshairs-gps" size={14} color={colors.cyan} />
+              <Text style={styles.infoTitle}>Nearest Station</Text>
+            </View>
+            <Text style={styles.infoMain}>{nearest.name}</Text>
+            <Text style={styles.infoSub}>
+              {nearest.distance.toFixed(1)} km • {nearest.availableChargers}/{nearest.totalChargers} available
+            </Text>
+          </Pressable>
+        ) : null}
+
+        <Pressable style={styles.infoCard} onPress={() => onSelectTab("Favorites")}>
+          <View style={styles.infoCardTitleRow}>
+            <MaterialCommunityIcons name="heart-outline" size={14} color="#fb7185" />
+            <Text style={styles.infoTitle}>Favorites</Text>
+          </View>
+          <Text style={styles.infoMain}>{favoriteCount} saved</Text>
+          <Text style={styles.infoSub}>Quick access to preferred stations</Text>
+        </Pressable>
       </View>
 
       {activeSession ? (
-        <Pressable style={styles.sessionCard} onPress={() => onSelectTab("Session")}>
-          <Text style={styles.sessionTitle}>Charging Session Active</Text>
-          <Text style={styles.sessionSub}>{activeSession.stationName}</Text>
-          <Text style={styles.sessionHint}>Tap to monitor charging progress</Text>
-        </Pressable>
-      ) : null}
-
-      {!activeSession && latestSession ? (
-        <View style={styles.historyCard}>
-          <Text style={styles.historyTitle}>Latest Session</Text>
-          <Text style={styles.historyStation}>{latestSession.stationName}</Text>
-          <View style={styles.historyRow}>
-            <Text style={styles.historyText}>{latestSession.energyAddedKwh.toFixed(1)} kWh</Text>
-            <Text style={styles.historyText}>PHP {latestSession.estimatedCost.toFixed(2)}</Text>
-            <Text style={styles.historyText}>{Math.round(latestSession.progressPercent)}%</Text>
+        <Pressable style={styles.activeCard} onPress={() => onSelectTab("Session")}>
+          <View style={styles.activeHeader}>
+            <Text style={styles.activeTitle}>Charging Session Active</Text>
+            <View style={styles.liveBadge}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveText}>LIVE</Text>
+            </View>
           </View>
-        </View>
-      ) : null}
-
-      {nearest ? (
-        <Pressable style={styles.stationCard} onPress={() => onSelectTab("Maps")}>
-          <Text style={styles.stationTitle}>Nearest Station</Text>
-          <Text style={styles.stationName}>{nearest.name}</Text>
-          <Text style={styles.stationSub}>
-            {nearest.distance.toFixed(1)} km away | {nearest.availableChargers}/{nearest.totalChargers} available
-          </Text>
+          <Text style={styles.activeStation}>{activeSession.stationName}</Text>
+          <Text style={styles.activeHint}>Tap to monitor your charging progress in real time.</Text>
         </Pressable>
-      ) : null}
+      ) : (
+        <View style={styles.latestCard}>
+          <View style={styles.latestTitleRow}>
+            <Text style={styles.latestTitle}>Latest Session</Text>
+            {latestSession ? <Text style={styles.latestDate}>{formatShortDate(latestSession.endedAt)}</Text> : null}
+          </View>
+          {latestSession ? (
+            <>
+              <Text style={styles.latestStation}>{latestSession.stationName}</Text>
+              <View style={styles.latestMetaRow}>
+                <Text style={styles.latestMeta}>{latestSession.energyAddedKwh.toFixed(1)} kWh</Text>
+                <Text style={styles.latestMeta}>PHP {latestSession.estimatedCost.toFixed(2)}</Text>
+                <Text style={styles.latestMeta}>{Math.round(latestSession.progressPercent)}%</Text>
+              </View>
+            </>
+          ) : (
+            <Text style={styles.latestEmpty}>No charging history yet. Start your first session from Maps.</Text>
+          )}
+        </View>
+      )}
 
       <View style={styles.monthSummary}>
-        <Text style={styles.monthSummaryTitle}>This Month</Text>
+        <View style={styles.monthHeader}>
+          <Text style={styles.monthSummaryTitle}>This Month</Text>
+          <Text style={styles.monthSummaryHint}>Performance Snapshot</Text>
+        </View>
         <View style={styles.monthSummaryGrid}>
           <View style={styles.monthTile}>
             <Text style={styles.monthTileLabel}>Sessions</Text>
@@ -135,17 +217,17 @@ export function HomeScreen({
             <Text style={styles.monthTileValue}>PHP {monthCost.toFixed(2)}</Text>
           </View>
           <View style={styles.monthTile}>
-            <Text style={styles.monthTileLabel}>Favorites</Text>
-            <Text style={styles.monthTileValue}>{favoriteCount}</Text>
+            <Text style={styles.monthTileLabel}>Avg Session Cost</Text>
+            <Text style={styles.monthTileValue}>PHP {monthAvgCost.toFixed(2)}</Text>
           </View>
         </View>
       </View>
 
       <View style={styles.actionGrid}>
-        {cards.map((card) => (
+        {quickActions.map((card) => (
           <Pressable key={card.label} style={styles.actionCard} onPress={() => onSelectTab(card.tab)}>
-            <View style={styles.actionIconWrap}>
-              <MaterialCommunityIcons name={card.icon} size={17} color={colors.emerald} />
+            <View style={[styles.actionIconWrap, { backgroundColor: card.tint }]}>
+              <MaterialCommunityIcons name={card.icon} size={17} color={card.color} />
             </View>
             <Text style={styles.actionTitle}>{card.label}</Text>
             <Text style={styles.actionSub}>{card.subtitle}</Text>
@@ -165,34 +247,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingTop: 12,
     paddingBottom: 20,
-    gap: 14,
+    gap: 12,
   },
   hero: {
     borderRadius: 24,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: "#0f2034",
+    backgroundColor: "#102339",
     padding: 14,
     overflow: "hidden",
     gap: 12,
   },
-  heroGlowLarge: {
+  heroGlowA: {
     position: "absolute",
-    width: 250,
-    height: 250,
-    borderRadius: 125,
-    backgroundColor: "#31d4f522",
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: "#31d4f521",
     right: -70,
-    top: -170,
+    top: -140,
   },
-  heroGlowSmall: {
+  heroGlowB: {
     position: "absolute",
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: "#24d6a015",
+    width: 170,
+    height: 170,
+    borderRadius: 85,
+    backgroundColor: "#24d6a018",
     left: -90,
-    bottom: -120,
+    bottom: -110,
   },
   heroTopRow: {
     flexDirection: "row",
@@ -202,13 +284,15 @@ const styles = StyleSheet.create({
   },
   kicker: {
     color: colors.cyan,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
   },
   title: {
     marginTop: 4,
     color: colors.text,
-    fontSize: 24,
+    fontSize: 26,
     lineHeight: 30,
     fontWeight: "800",
   },
@@ -216,27 +300,22 @@ const styles = StyleSheet.create({
     marginTop: 4,
     color: colors.textMuted,
     fontSize: 12,
-    maxWidth: 250,
+    maxWidth: 240,
   },
-  avatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: "#132f3f",
+  heroMapBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: "#31d4f54d",
+    backgroundColor: "#0c1b2cc7",
     alignItems: "center",
     justifyContent: "center",
-  },
-  avatarText: {
-    color: colors.text,
-    fontWeight: "800",
-    fontSize: 15,
   },
   heroMetricsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 7,
   },
   heroMetricChip: {
     borderWidth: 1,
@@ -244,7 +323,7 @@ const styles = StyleSheet.create({
     borderRadius: 99,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    backgroundColor: "#0a1726c7",
+    backgroundColor: "#081424c9",
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
@@ -254,107 +333,167 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
   },
-  carCard: {
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: "#102236",
-    paddingTop: 20,
-    paddingBottom: 18,
+  heroBottomRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    overflow: "hidden",
+    gap: 8,
   },
-  carGlow: {
-    position: "absolute",
-    width: 230,
-    height: 230,
-    borderRadius: 115,
-    backgroundColor: "#31d4f521",
-    top: -155,
-  },
-  carTitle: {
-    marginTop: 10,
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: "700",
-  },
-  carSub: {
-    marginTop: 2,
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  sessionCard: {
-    borderRadius: 18,
+  linkedCarPill: {
+    flex: 1,
+    borderRadius: 11,
     borderWidth: 1,
     borderColor: "#24d6a066",
-    backgroundColor: "#0f2737",
-    padding: 16,
+    backgroundColor: "#24d6a01f",
+    minHeight: 38,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
-  sessionTitle: {
-    color: "#86f6d8",
-    fontWeight: "800",
-    fontSize: 13,
-  },
-  sessionSub: {
-    marginTop: 6,
+  linkedCarText: {
     color: colors.text,
+    fontSize: 12,
     fontWeight: "700",
-    fontSize: 16,
   },
-  sessionHint: {
-    marginTop: 4,
+  heroPrimaryBtn: {
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: "#24d6a080",
+    backgroundColor: "#24d6a02a",
+    minHeight: 38,
+    minWidth: 128,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroPrimaryBtnText: {
+    color: colors.emerald,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  dualInfoRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  infoCard: {
+    flex: 1,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: "#0d1d30",
+    padding: 11,
+    gap: 6,
+  },
+  infoCardTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  infoTitle: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  infoMain: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  infoSub: {
+    color: colors.textMuted,
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  activeCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#24d6a066",
+    backgroundColor: "#102c31",
+    padding: 13,
+    gap: 6,
+  },
+  activeHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  activeTitle: {
+    color: "#9ef7dd",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  liveBadge: {
+    borderRadius: 99,
+    borderWidth: 1,
+    borderColor: "#10b9818f",
+    backgroundColor: "#10b98124",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#6ee7b7",
+  },
+  liveText: {
+    color: "#6ee7b7",
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  activeStation: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  activeHint: {
     color: colors.textMuted,
     fontSize: 12,
   },
-  historyCard: {
+  latestCard: {
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.bgCard,
     padding: 12,
-    gap: 6,
+    gap: 7,
   },
-  historyTitle: {
+  latestTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  latestTitle: {
     color: colors.amber,
     fontSize: 12,
     fontWeight: "700",
   },
-  historyStation: {
+  latestDate: {
+    color: colors.textMuted,
+    fontSize: 11,
+  },
+  latestStation: {
     color: colors.text,
     fontSize: 14,
     fontWeight: "700",
   },
-  historyRow: {
+  latestMetaRow: {
     flexDirection: "row",
-    gap: 10,
     flexWrap: "wrap",
+    gap: 8,
   },
-  historyText: {
+  latestMeta: {
     color: colors.textMuted,
     fontSize: 12,
     fontWeight: "600",
   },
-  stationCard: {
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.bgCard,
-    padding: 16,
-  },
-  stationTitle: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  stationName: {
-    marginTop: 6,
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  stationSub: {
-    marginTop: 4,
+  latestEmpty: {
     color: colors.textMuted,
     fontSize: 12,
   },
@@ -362,14 +501,25 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: "#0f2034",
+    backgroundColor: "#0f2036",
     padding: 12,
+    gap: 8,
+  },
+  monthHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 8,
   },
   monthSummaryTitle: {
     color: colors.text,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "800",
+  },
+  monthSummaryHint: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "600",
   },
   monthSummaryGrid: {
     flexDirection: "row",
@@ -378,11 +528,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   monthTile: {
-    width: "48%",
+    width: "48.5%",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: "#081729d4",
+    backgroundColor: "#081729d1",
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
@@ -401,28 +551,27 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    rowGap: 12,
+    rowGap: 10,
   },
   actionCard: {
-    width: "48%",
-    borderRadius: 16,
+    width: "48.5%",
+    borderRadius: 15,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: "#0e1f32",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    minHeight: 118,
+    backgroundColor: "#0d1f32",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    minHeight: 108,
   },
   actionIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: "#24d6a01f",
+    width: 34,
+    height: 34,
+    borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
   },
   actionTitle: {
-    marginTop: 12,
+    marginTop: 10,
     color: colors.text,
     fontSize: 14,
     fontWeight: "700",
@@ -430,6 +579,7 @@ const styles = StyleSheet.create({
   actionSub: {
     marginTop: 4,
     color: colors.textMuted,
-    fontSize: 12,
+    fontSize: 11,
+    lineHeight: 16,
   },
 });
