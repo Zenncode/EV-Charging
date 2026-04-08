@@ -21,14 +21,14 @@ export function StartStepLayout({
 }: StartStepLayoutProps) {
   const safePercent = Math.max(0, Math.min(100, blackOverlayPercent));
   const base = safePercent / 100;
-  const globalDimAlpha = Math.min(0.12, base * 0.08);
-  const fadeAlphaA = Math.min(0.1, base * 0.05);
-  const fadeAlphaB = Math.min(0.16, base * 0.09);
-  const fadeAlphaC = Math.min(0.24, base * 0.14);
-  const fadeAlphaD = Math.min(0.32, base * 0.21);
-  const fadeAlphaE = Math.min(0.42, base * 0.29);
-  const edgeVignetteAlpha = Math.min(0.22, base * 0.13);
-  const bottomFocusAlpha = Math.min(0.34, base * 0.22);
+  const globalDimAlpha = Math.min(0.1, base * 0.06);
+  const fadeAlphaA = Math.min(0.08, base * 0.04);
+  const fadeAlphaB = Math.min(0.12, base * 0.07);
+  const fadeAlphaC = Math.min(0.17, base * 0.11);
+  const fadeAlphaD = Math.min(0.23, base * 0.16);
+  const fadeAlphaE = Math.min(0.3, base * 0.22);
+  const fadeAlphaF = Math.min(0.38, base * 0.29);
+  const bottomFocusAlpha = Math.min(0.22, base * 0.14);
 
   return (
     <View style={styles.container}>
@@ -44,8 +44,7 @@ export function StartStepLayout({
         <View style={[styles.bottomFadeC, { backgroundColor: `rgba(0, 0, 0, ${fadeAlphaC})` }]} />
         <View style={[styles.bottomFadeD, { backgroundColor: `rgba(0, 0, 0, ${fadeAlphaD})` }]} />
         <View style={[styles.bottomFadeE, { backgroundColor: `rgba(0, 0, 0, ${fadeAlphaE})` }]} />
-        <View style={[styles.leftVignette, { backgroundColor: `rgba(0, 0, 0, ${edgeVignetteAlpha})` }]} />
-        <View style={[styles.rightVignette, { backgroundColor: `rgba(0, 0, 0, ${edgeVignetteAlpha})` }]} />
+        <View style={[styles.bottomFadeF, { backgroundColor: `rgba(0, 0, 0, ${fadeAlphaF})` }]} />
         <View style={[styles.bottomFocus, { backgroundColor: `rgba(0, 0, 0, ${bottomFocusAlpha})` }]} />
 
         <View style={styles.content}>
@@ -88,58 +87,50 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: "68%",
+    height: "74%",
   },
   bottomFadeB: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    height: "58%",
+    height: "65%",
   },
   bottomFadeC: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    height: "48%",
+    height: "56%",
   },
   bottomFadeD: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    height: "40%",
+    height: "48%",
   },
   bottomFadeE: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    height: "33%",
-    backgroundColor: "rgba(4, 9, 18, 0.66)",
+    height: "41%",
   },
-  leftVignette: {
+  bottomFadeF: {
     position: "absolute",
     left: 0,
-    top: 0,
-    bottom: 0,
-    width: "22%",
-  },
-  rightVignette: {
-    position: "absolute",
     right: 0,
-    top: 0,
     bottom: 0,
-    width: "22%",
+    height: "35%",
   },
   bottomFocus: {
     position: "absolute",
-    left: -12,
-    right: -12,
-    bottom: -50,
-    height: "34%",
-    borderRadius: 220,
+    left: -10,
+    right: -10,
+    bottom: -42,
+    height: "30%",
+    borderRadius: 180,
   },
   content: {
     paddingHorizontal: 12,
