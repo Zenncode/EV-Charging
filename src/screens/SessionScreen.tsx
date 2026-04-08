@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ToastMessagePayload } from "../components/ui/toastmessage";
 import { chargingStations } from "../data/stations";
 import { getSessionSnapshot } from "../sessionMetrics";
 import { colors } from "../theme";
 import { ActiveSession } from "../types";
-import { ToastMessagePayload } from "../components/ui/toastmessage";
 
 interface SessionScreenProps {
   activeSession: ActiveSession | null;
@@ -21,6 +21,16 @@ function formatClock(seconds: number) {
   return `${hours.toString().padStart(2, "0")}:${mins
     .toString()
     .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+}
+
+function formatShortDateTime(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "Unknown";
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const hours = date.getHours().toString().padStart(2, "0");
+  const mins = date.getMinutes().toString().padStart(2, "0");
+  return `${month}/${day} ${hours}:${mins}`;
 }
 
 export function SessionScreen({ activeSession, onStopSession, onOpenMaps, onToast }: SessionScreenProps) {
@@ -48,19 +58,6 @@ export function SessionScreen({ activeSession, onStopSession, onOpenMaps, onToas
     return getSessionSnapshot(activeSession.startedAt, station?.price ?? 18.5);
   }, [activeSession, station?.price, tick]);
 
-  if (!activeSession) {
-    return (
-      <View style={[styles.emptyContainer, styles.center]}>
-        <MaterialCommunityIcons name="battery-alert-variant-outline" size={34} color={colors.cyan} />
-        <Text style={styles.emptyTitle}>No Active Session</Text>
-        <Text style={styles.emptySub}>Start charging from Maps to track your live session.</Text>
-        <Pressable style={styles.openMapBtn} onPress={onOpenMaps}>
-          <Text style={styles.openMapText}>Open Maps</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
   const stopNow = () => {
     onToast({
       title: "Stop charging?",
@@ -72,92 +69,153 @@ export function SessionScreen({ activeSession, onStopSession, onOpenMaps, onToas
     });
   };
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.headerCard}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Charging in Progress</Text>
-          <Text style={styles.headerSub}>{activeSession.stationName}</Text>
+  if (!activeSession) {
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.emptyContent}>
+        <View style={styles.emptyHero}>
+          <View style={styles.emptyGlowPrimary} />
+          <View style={styles.emptyGlowSecondary} />
+          <View style={styles.emptyIconWrap}>
+            <MaterialCommunityIcons name="battery-alert-variant-outline" size={34} color={colors.cyan} />
+          </View>
+          <Text style={styles.emptyTitle}>No Active Session</Text>
+          <Text style={styles.emptySub}>Start charging from Maps to monitor progress, cost, and energy live.</Text>
+          <Pressable style={styles.emptyPrimaryBtn} onPress={onOpenMaps}>
+            <MaterialCommunityIcons name="map-marker-path" size={16} color={colors.cyan} />
+            <Text style={styles.emptyPrimaryText}>Open Maps</Text>
+          </Pressable>
         </View>
-        <Pressable style={styles.closeBtn} onPress={onOpenMaps}>
-          <MaterialCommunityIcons name="close" size={18} color={colors.rose} />
-        </Pressable>
-      </View>
 
-      <View style={styles.mainCard}>
-        <View style={styles.mainGlow} />
-        <View style={styles.batteryWrap}>
-          <View style={styles.batteryBody}>
-            <MaterialCommunityIcons name="battery-charging-70" size={34} color={colors.emerald} />
+        <View style={styles.emptyInfoCard}>
+          <Text style={styles.emptyInfoTitle}>What you can track here</Text>
+          <View style={styles.emptyInfoRow}>
+            <MaterialCommunityIcons name="clock-time-four-outline" size={14} color={colors.cyan} />
+            <Text style={styles.emptyInfoText}>Elapsed charging time</Text>
+          </View>
+          <View style={styles.emptyInfoRow}>
+            <MaterialCommunityIcons name="cash-multiple" size={14} color={colors.emerald} />
+            <Text style={styles.emptyInfoText}>Real-time session cost</Text>
+          </View>
+          <View style={styles.emptyInfoRow}>
+            <MaterialCommunityIcons name="lightning-bolt-outline" size={14} color={colors.amber} />
+            <Text style={styles.emptyInfoText}>Energy added and battery progress</Text>
           </View>
         </View>
+      </ScrollView>
+    );
+  }
 
-        <Text style={styles.percentText}>{snapshot.progressPercent.toFixed(1)}%</Text>
-        <Text style={styles.percentLabel}>Battery Level</Text>
+  const progress = Math.max(0, Math.min(100, snapshot.progressPercent));
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={styles.hero}>
+        <View style={styles.heroGlowA} />
+        <View style={styles.heroGlowB} />
+        <View style={styles.heroTopRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.heroKicker}>Live Session</Text>
+            <Text style={styles.heroTitle}>Charging in Progress</Text>
+          </View>
+          <View style={styles.liveBadge}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveText}>LIVE</Text>
+          </View>
+        </View>
+        <Text style={styles.heroStation}>{activeSession.stationName}</Text>
+        <View style={styles.heroMetaRow}>
+          <View style={styles.heroMetaChip}>
+            <MaterialCommunityIcons name="clock-start" size={13} color={colors.cyan} />
+            <Text style={styles.heroMetaText}>Started {formatShortDateTime(activeSession.startedAt)}</Text>
+          </View>
+          <View style={styles.heroMetaChip}>
+            <MaterialCommunityIcons name="wallet-outline" size={13} color={colors.emerald} />
+            <Text style={styles.heroMetaText}>{activeSession.paymentMethod ?? "GCash"}</Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.progressCard}>
+        <View style={styles.progressTopRow}>
+          <View>
+            <Text style={styles.progressPercent}>{progress.toFixed(1)}%</Text>
+            <Text style={styles.progressCaption}>Battery level</Text>
+          </View>
+          <View style={styles.batteryWrap}>
+            <MaterialCommunityIcons
+              name={
+                progress >= 90
+                  ? "battery-charging-100"
+                  : progress >= 70
+                    ? "battery-charging-80"
+                    : progress >= 40
+                      ? "battery-charging-50"
+                      : "battery-charging-30"
+              }
+              size={40}
+              color={colors.emerald}
+            />
+          </View>
+        </View>
 
         <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${Math.max(4, snapshot.progressPercent)}%` }]} />
+          <View style={[styles.progressFill, { width: `${Math.max(4, progress)}%` }]} />
         </View>
         <View style={styles.progressMetaRow}>
-          <Text style={styles.metaText}>Start: 0%</Text>
-          <Text style={styles.metaTarget}>Target: 80%</Text>
-          <Text style={styles.metaText}>Full: 100%</Text>
+          <Text style={styles.progressMetaText}>Start 0%</Text>
+          <Text style={styles.progressMetaTarget}>Target 80%</Text>
+          <Text style={styles.progressMetaText}>Full 100%</Text>
         </View>
 
-        <View style={styles.grid}>
-          <View style={styles.statCard}>
-            <View style={styles.statLabelRow}>
+        <View style={styles.timerRow}>
+          <View style={styles.timerCard}>
+            <View style={styles.timerLabelRow}>
               <MaterialCommunityIcons name="clock-time-four-outline" size={14} color={colors.cyan} />
-              <Text style={styles.statLabel}>Elapsed Time</Text>
+              <Text style={styles.timerLabel}>Elapsed</Text>
             </View>
-            <Text style={styles.statValue}>{formatClock(snapshot.elapsedSec)}</Text>
+            <Text style={styles.timerValue}>{formatClock(snapshot.elapsedSec)}</Text>
           </View>
-
-          <View style={styles.statCard}>
-            <View style={styles.statLabelRow}>
+          <View style={styles.timerCard}>
+            <View style={styles.timerLabelRow}>
               <MaterialCommunityIcons name="timer-sand" size={14} color={colors.amber} />
-              <Text style={styles.statLabel}>Time Remaining</Text>
+              <Text style={styles.timerLabel}>Remaining</Text>
             </View>
-            <Text style={styles.statValue}>{formatClock(snapshot.targetEtaSec)}</Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <View style={styles.statLabelRow}>
-              <MaterialCommunityIcons name="cash-multiple" size={14} color={colors.emerald} />
-              <Text style={styles.statLabel}>Current Cost</Text>
-            </View>
-            <Text style={styles.statValue}>PHP {snapshot.estimatedCost.toFixed(2)}</Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <View style={styles.statLabelRow}>
-              <MaterialCommunityIcons name="lightning-bolt-outline" size={14} color={colors.lime} />
-              <Text style={styles.statLabel}>Energy Added</Text>
-            </View>
-            <Text style={styles.statValue}>{snapshot.energyAddedKwh.toFixed(1)} kWh</Text>
+            <Text style={styles.timerValue}>{formatClock(snapshot.targetEtaSec)}</Text>
           </View>
         </View>
       </View>
 
-      <View style={styles.detailsCard}>
-        <Text style={styles.detailsTitle}>Session Details</Text>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Payment Method</Text>
-          <Text style={styles.detailValue}>{activeSession.paymentMethod ?? "GCash"}</Text>
+      <View style={styles.statsGrid}>
+        <View style={styles.statTile}>
+          <Text style={styles.statLabel}>Energy Added</Text>
+          <Text style={styles.statValue}>{snapshot.energyAddedKwh.toFixed(1)} kWh</Text>
         </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Authorized Amount</Text>
-          <Text style={styles.detailValue}>PHP {(activeSession.authorizedAmount ?? 150).toFixed(0)}</Text>
+        <View style={styles.statTile}>
+          <Text style={styles.statLabel}>Cost So Far</Text>
+          <Text style={styles.statValue}>PHP {snapshot.estimatedCost.toFixed(2)}</Text>
         </View>
-        {station ? (
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Station Rate</Text>
-            <Text style={styles.detailValue}>PHP {station.price.toFixed(1)}/kWh</Text>
-          </View>
-        ) : null}
-        <Pressable style={styles.stopBtn} onPress={stopNow}>
-          <Text style={styles.stopText}>Stop Charging</Text>
-        </Pressable>
+        <View style={styles.statTile}>
+          <Text style={styles.statLabel}>Station Rate</Text>
+          <Text style={styles.statValue}>PHP {(station?.price ?? 18.5).toFixed(1)}/kWh</Text>
+        </View>
+        <View style={styles.statTile}>
+          <Text style={styles.statLabel}>Authorized Hold</Text>
+          <Text style={styles.statValue}>PHP {(activeSession.authorizedAmount ?? 150).toFixed(0)}</Text>
+        </View>
+      </View>
+
+      <View style={styles.actionsCard}>
+        <Text style={styles.actionsTitle}>Session Actions</Text>
+        <View style={styles.actionRow}>
+          <Pressable style={[styles.actionBtn, styles.mapBtn]} onPress={onOpenMaps}>
+            <MaterialCommunityIcons name="map-marker-radius-outline" size={15} color={colors.cyan} />
+            <Text style={styles.mapBtnText}>Open Maps</Text>
+          </Pressable>
+          <Pressable style={[styles.actionBtn, styles.stopBtn]} onPress={stopNow}>
+            <MaterialCommunityIcons name="stop-circle-outline" size={15} color={colors.rose} />
+            <Text style={styles.stopBtnText}>Stop Charging</Text>
+          </Pressable>
+        </View>
       </View>
     </ScrollView>
   );
@@ -169,131 +227,242 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
   content: {
-    paddingBottom: 20,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 22,
     gap: 12,
   },
-  center: {
+  emptyContent: {
+    paddingHorizontal: 12,
+    paddingTop: 14,
+    paddingBottom: 22,
+    gap: 12,
+  },
+  emptyHero: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: "#0f2136",
+    padding: 14,
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  emptyGlowPrimary: {
+    position: "absolute",
+    width: 210,
+    height: 210,
+    borderRadius: 105,
+    backgroundColor: "#31d4f51b",
+    top: -130,
+    right: -90,
+  },
+  emptyGlowSecondary: {
+    position: "absolute",
+    width: 170,
+    height: 170,
+    borderRadius: 85,
+    backgroundColor: "#24d6a017",
+    bottom: -120,
+    left: -90,
+  },
+  emptyIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 1,
+    borderColor: "#31d4f560",
+    backgroundColor: "#0c1a2c",
     alignItems: "center",
     justifyContent: "center",
   },
-  emptyContainer: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    paddingHorizontal: 20,
-  },
   emptyTitle: {
-    marginTop: 10,
+    marginTop: 12,
     color: colors.text,
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "800",
   },
   emptySub: {
-    marginTop: 8,
+    marginTop: 6,
     color: colors.textMuted,
     textAlign: "center",
-    maxWidth: 260,
-    lineHeight: 19,
+    lineHeight: 20,
+    maxWidth: 280,
   },
-  openMapBtn: {
+  emptyPrimaryBtn: {
     marginTop: 12,
+    minHeight: 40,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: "#31d4f566",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
     backgroundColor: "#31d4f520",
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
   },
-  openMapText: {
+  emptyPrimaryText: {
     color: colors.cyan,
     fontWeight: "700",
   },
-  headerCard: {
-    backgroundColor: "#0d1b2c",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  headerTitle: {
-    color: colors.text,
-    fontSize: 20,
-    fontWeight: "800",
-  },
-  headerSub: {
-    marginTop: 1,
-    color: colors.textMuted,
-    fontSize: 12,
-  },
-  closeBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#111f30",
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  mainCard: {
-    marginHorizontal: 10,
+  emptyInfoCard: {
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.bgCard,
     padding: 12,
-    overflow: "hidden",
+    gap: 8,
   },
-  mainGlow: {
-    position: "absolute",
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: "#24d6a018",
-    top: -170,
-    right: -90,
-  },
-  batteryWrap: {
-    alignItems: "center",
-    marginTop: 2,
-  },
-  batteryBody: {
-    width: 70,
-    height: 130,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: "#2f4256",
-    backgroundColor: "#0a1624",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: colors.emerald,
-    shadowOpacity: 0.24,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  percentText: {
-    marginTop: 10,
-    textAlign: "center",
+  emptyInfoTitle: {
     color: colors.text,
-    fontSize: 42,
-    lineHeight: 46,
+    fontSize: 16,
     fontWeight: "800",
   },
-  percentLabel: {
-    marginTop: 1,
-    textAlign: "center",
+  emptyInfoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  emptyInfoText: {
     color: colors.textMuted,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
   },
+  hero: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: "#0f2238",
+    padding: 14,
+    gap: 8,
+    overflow: "hidden",
+  },
+  heroGlowA: {
+    position: "absolute",
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: "#31d4f51c",
+    right: -70,
+    top: -145,
+  },
+  heroGlowB: {
+    position: "absolute",
+    width: 170,
+    height: 170,
+    borderRadius: 85,
+    backgroundColor: "#24d6a016",
+    left: -90,
+    bottom: -110,
+  },
+  heroTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 8,
+  },
+  heroKicker: {
+    color: colors.cyan,
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  heroTitle: {
+    marginTop: 2,
+    color: colors.text,
+    fontSize: 22,
+    fontWeight: "800",
+  },
+  heroStation: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  liveBadge: {
+    borderRadius: 99,
+    borderWidth: 1,
+    borderColor: "#10b98178",
+    backgroundColor: "#10b98120",
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#6ee7b7",
+  },
+  liveText: {
+    color: "#6ee7b7",
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  heroMetaRow: {
+    marginTop: 2,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+  },
+  heroMetaChip: {
+    borderRadius: 99,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: "#0a1829c7",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  heroMetaText: {
+    color: colors.textSoft,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  progressCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.bgCard,
+    padding: 12,
+    gap: 8,
+  },
+  progressTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 8,
+  },
+  progressPercent: {
+    color: colors.text,
+    fontSize: 38,
+    lineHeight: 42,
+    fontWeight: "800",
+  },
+  progressCaption: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  batteryWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#10b9815f",
+    backgroundColor: "#0f2b27",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   progressTrack: {
-    marginTop: 10,
+    marginTop: 2,
     height: 10,
     borderRadius: 20,
-    backgroundColor: "#23374d",
+    backgroundColor: "#24384f",
     overflow: "hidden",
   },
   progressFill: {
@@ -302,40 +471,64 @@ const styles = StyleSheet.create({
     backgroundColor: colors.emerald,
   },
   progressMetaRow: {
-    marginTop: 8,
+    marginTop: 4,
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  metaText: {
+  progressMetaText: {
     color: colors.textMuted,
-    fontSize: 12,
+    fontSize: 11,
   },
-  metaTarget: {
+  progressMetaTarget: {
     color: colors.emerald,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
   },
-  grid: {
-    marginTop: 12,
+  timerRow: {
+    marginTop: 6,
+    flexDirection: "row",
+    gap: 8,
+  },
+  timerCard: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: "#102236",
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    gap: 6,
+  },
+  timerLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  timerLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  timerValue: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+  },
+  statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
     rowGap: 8,
   },
-  statCard: {
+  statTile: {
     width: "48.5%",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: "#102234",
-    paddingHorizontal: 9,
+    backgroundColor: "#0e1f33",
+    paddingHorizontal: 10,
     paddingVertical: 8,
-    minHeight: 70,
-  },
-  statLabelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
   },
   statLabel: {
     color: colors.textMuted,
@@ -343,53 +536,54 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   statValue: {
-    marginTop: 8,
+    marginTop: 4,
     color: colors.text,
-    fontSize: 22,
-    lineHeight: 30,
+    fontSize: 14,
     fontWeight: "800",
   },
-  detailsCard: {
-    marginHorizontal: 10,
+  actionsCard: {
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.bgCard,
     padding: 12,
+    gap: 9,
+  },
+  actionsTitle: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  actionRow: {
+    flexDirection: "row",
     gap: 8,
   },
-  detailsTitle: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: "800",
-  },
-  detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  detailLabel: {
-    color: colors.textMuted,
-    fontSize: 12,
-  },
-  detailValue: {
-    color: colors.text,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  stopBtn: {
-    marginTop: 4,
-    borderRadius: 10,
+  actionBtn: {
+    flex: 1,
     minHeight: 42,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#ff7d8b99",
-    backgroundColor: "#ff7d8b24",
     alignItems: "center",
     justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
   },
-  stopText: {
+  mapBtn: {
+    borderColor: "#22d3ee66",
+    backgroundColor: "#22d3ee1a",
+  },
+  mapBtnText: {
+    color: colors.cyan,
+    fontWeight: "700",
+    fontSize: 12,
+  },
+  stopBtn: {
+    borderColor: "#ff7d8b99",
+    backgroundColor: "#ff7d8b24",
+  },
+  stopBtnText: {
     color: colors.rose,
-    fontSize: 13,
     fontWeight: "800",
+    fontSize: 12,
   },
 });
