@@ -8,7 +8,6 @@ import {
   Modal,
   PanResponder,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -56,6 +55,10 @@ export function MapScreen({
   const [speedFilter, setSpeedFilter] = useState<"All" | ChargingSpeed>("All");
   const [connectorFilter, setConnectorFilter] = useState<"All" | ConnectorType>("All");
   const [availableOnly, setAvailableOnly] = useState(false);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [draftSpeedFilter, setDraftSpeedFilter] = useState<"All" | ChargingSpeed>("All");
+  const [draftConnectorFilter, setDraftConnectorFilter] = useState<"All" | ConnectorType>("All");
+  const [draftAvailableOnly, setDraftAvailableOnly] = useState(false);
   const [region, setRegion] = useState<Region>(defaultRegion);
   const [userCoord, setUserCoord] = useState<{ latitude: number; longitude: number } | null>(null);
   const [reserveStation, setReserveStation] = useState<ChargingStation | null>(null);
@@ -71,7 +74,14 @@ export function MapScreen({
   const filteredStations = useMemo(() => {
     const q = search.trim().toLowerCase();
     const list = chargingStations.filter((station) => {
-      if (q && !station.name.toLowerCase().includes(q) && !station.address.toLowerCase().includes(q)) {
+      const connectorSearch = station.connectorTypes.join(" ").toLowerCase();
+      if (
+        q &&
+        !station.name.toLowerCase().includes(q) &&
+        !station.address.toLowerCase().includes(q) &&
+        !station.speed.toLowerCase().includes(q) &&
+        !connectorSearch.includes(q)
+      ) {
         return false;
       }
       if (speedFilter !== "All" && station.speed !== speedFilter) {
@@ -94,6 +104,42 @@ export function MapScreen({
     filteredStations.length > 0
       ? filteredStations.reduce((sum, station) => sum + station.price, 0) / filteredStations.length
       : 0;
+  const hasActiveFilters =
+    Boolean(search.trim()) || speedFilter !== "All" || connectorFilter !== "All" || availableOnly || !sortByNearest;
+  const activeFilterCount =
+    (speedFilter !== "All" ? 1 : 0) + (connectorFilter !== "All" ? 1 : 0) + (availableOnly ? 1 : 0);
+
+  const resetFilters = () => {
+    setSearch("");
+    setSortByNearest(true);
+    setSpeedFilter("All");
+    setConnectorFilter("All");
+    setAvailableOnly(false);
+  };
+
+  const openFilterModal = () => {
+    setDraftSpeedFilter(speedFilter);
+    setDraftConnectorFilter(connectorFilter);
+    setDraftAvailableOnly(availableOnly);
+    setIsFilterModalOpen(true);
+  };
+
+  const closeFilterModal = () => {
+    setIsFilterModalOpen(false);
+  };
+
+  const applyFilters = () => {
+    setSpeedFilter(draftSpeedFilter);
+    setConnectorFilter(draftConnectorFilter);
+    setAvailableOnly(draftAvailableOnly);
+    setIsFilterModalOpen(false);
+  };
+
+  const resetDraftFilters = () => {
+    setDraftSpeedFilter("All");
+    setDraftConnectorFilter("All");
+    setDraftAvailableOnly(false);
+  };
 
   const requestLocation = async () => {
     try {
@@ -262,97 +308,74 @@ export function MapScreen({
       </MapView>
 
       <View style={styles.overlayTop}>
-        <Text style={styles.header}>Explore Chargers</Text>
-        <View style={styles.searchRow}>
-          <View style={styles.searchWrap}>
-            <MaterialCommunityIcons name="magnify" size={18} color={colors.textMuted} />
-            <TextInput
-              placeholder="Search stations..."
-              placeholderTextColor={colors.textMuted}
-              value={search}
-              onChangeText={setSearch}
-              style={styles.searchInput}
-            />
+        <View style={styles.headerTopRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.header}>Explore Chargers</Text>
+            <Text style={styles.headerSub}>Search and filter stations by speed, connector, and availability.</Text>
           </View>
-          <Pressable style={styles.actionSquare} onPress={() => setSortByNearest((prev) => !prev)}>
-            <MaterialCommunityIcons
-              name={sortByNearest ? "sort-ascending" : "sort-descending"}
-              size={18}
-              color={colors.text}
-            />
-          </Pressable>
-          <Pressable style={styles.actionSquare} onPress={requestLocation}>
+          <Pressable style={styles.headerLocateBtn} onPress={requestLocation}>
             <MaterialCommunityIcons name="crosshairs-gps" size={18} color={colors.text} />
           </Pressable>
         </View>
 
-        <View style={styles.toggleRow}>
-          <Pressable
-            style={[styles.toggleChip, availableOnly && styles.toggleChipActive]}
-            onPress={() => setAvailableOnly((prev) => !prev)}
-          >
-            <MaterialCommunityIcons
-              name={availableOnly ? "check-decagram" : "checkbox-blank-circle-outline"}
-              size={14}
-              color={availableOnly ? colors.emerald : colors.textMuted}
-            />
-            <Text style={[styles.toggleChipText, availableOnly && styles.toggleChipTextActive]}>
-              Available only
-            </Text>
-          </Pressable>
-          <Text style={styles.headerHint}>{sortByNearest ? "Nearest first" : "Farthest first"}</Text>
+        <View style={styles.searchWrap}>
+          <MaterialCommunityIcons name="magnify" size={18} color={colors.textMuted} />
+          <TextInput
+            placeholder="Search stations, speed, or connector..."
+            placeholderTextColor={colors.textMuted}
+            value={search}
+            onChangeText={setSearch}
+            style={styles.searchInput}
+          />
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterStripContent}
-          style={styles.filterStrip}
-        >
-          {speedFilters.map((item) => {
-            const active = speedFilter === item;
-            return (
-              <Pressable
-                key={`speed-${item}`}
-                style={[styles.filterChip, active && styles.filterChipActive]}
-                onPress={() => setSpeedFilter(item)}
-              >
-                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-                  {item === "All" ? "All Speeds" : item}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        <View style={styles.controlsRow}>
+          <Pressable
+            style={[styles.controlBtn, styles.sortBtn]}
+            onPress={() => setSortByNearest((prev) => !prev)}
+          >
+            <MaterialCommunityIcons
+              name={sortByNearest ? "sort-ascending" : "sort-descending"}
+              size={14}
+              color={colors.cyan}
+            />
+            <Text style={styles.controlBtnText}>{sortByNearest ? "Nearest" : "Farthest"}</Text>
+          </Pressable>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterStripContent}
-          style={styles.filterStrip}
-        >
-          {connectorFilters.map((item) => {
-            const active = connectorFilter === item;
-            return (
-              <Pressable
-                key={`connector-${item}`}
-                style={[styles.filterChip, active && styles.filterChipActiveSecondary]}
-                onPress={() => setConnectorFilter(item)}
-              >
-                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-                  {item === "All" ? "All Connectors" : item}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+          <Pressable style={[styles.controlBtn, styles.filterOpenBtn]} onPress={openFilterModal}>
+            <MaterialCommunityIcons name="tune-variant" size={14} color={colors.text} />
+            <Text style={styles.controlBtnText}>Filters</Text>
+            {activeFilterCount > 0 ? (
+              <View style={styles.filterCountBadge}>
+                <Text style={styles.filterCountText}>{activeFilterCount}</Text>
+              </View>
+            ) : null}
+          </Pressable>
+
+          <Pressable
+            style={[styles.controlBtn, !hasActiveFilters && styles.controlBtnDisabled]}
+            disabled={!hasActiveFilters}
+            onPress={resetFilters}
+          >
+            <MaterialCommunityIcons name="filter-remove-outline" size={14} color={colors.textMuted} />
+            <Text style={styles.controlBtnText}>Reset</Text>
+          </Pressable>
+        </View>
 
         <View style={styles.summaryRow}>
           <Text style={styles.summaryChip}>
             Showing {filteredStations.length} stations ({availableCount} available)
           </Text>
           <Text style={styles.summaryChip}>Avg PHP {avgRate.toFixed(1)}/kWh</Text>
+          <Text style={styles.summaryChip}>
+            {speedFilter === "All" ? "All speeds" : speedFilter} |{" "}
+            {connectorFilter === "All" ? "All connectors" : connectorFilter}
+          </Text>
+          {availableOnly ? <Text style={styles.summaryChip}>Available only</Text> : null}
         </View>
+        {filteredStations.length === 0 ? (
+          <Text style={styles.emptyFilterText}>No stations match your current filters.</Text>
+        ) : null}
         {locationError ? <Text style={styles.errorText}>{locationError}</Text> : null}
       </View>
 
@@ -417,6 +440,86 @@ export function MapScreen({
           <Text style={styles.revealSheetText}>Show Nearby Stations ({filteredStations.length})</Text>
         </Pressable>
       ) : null}
+
+      <Modal visible={isFilterModalOpen} transparent animationType="slide" onRequestClose={closeFilterModal}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.filterModalCard}>
+            <View style={styles.modalHeaderRow}>
+              <View>
+                <Text style={styles.modalTitle}>Filters</Text>
+                <Text style={styles.modalSub}>Adjust speed and connector type</Text>
+              </View>
+              <Pressable style={styles.modalCloseBtn} onPress={closeFilterModal}>
+                <MaterialCommunityIcons name="close" size={16} color={colors.textMuted} />
+              </Pressable>
+            </View>
+
+            <Text style={styles.filterLabel}>Charging Speed</Text>
+            <View style={styles.filterWrap}>
+              {speedFilters.map((item) => {
+                const active = draftSpeedFilter === item;
+                return (
+                  <Pressable
+                    key={`speed-modal-${item}`}
+                    style={[styles.filterChip, active && styles.filterChipActive]}
+                    onPress={() => setDraftSpeedFilter(item)}
+                  >
+                    <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                      {item === "All" ? "All Speeds" : item}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={styles.filterLabel}>Connector Type</Text>
+            <View style={styles.filterWrap}>
+              {connectorFilters.map((item) => {
+                const active = draftConnectorFilter === item;
+                return (
+                  <Pressable
+                    key={`connector-modal-${item}`}
+                    style={[styles.filterChip, active && styles.filterChipActiveSecondary]}
+                    onPress={() => setDraftConnectorFilter(item)}
+                  >
+                    <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                      {item === "All" ? "All Connectors" : item}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Pressable
+              style={[styles.availabilityToggle, draftAvailableOnly && styles.availabilityToggleActive]}
+              onPress={() => setDraftAvailableOnly((prev) => !prev)}
+            >
+              <MaterialCommunityIcons
+                name={draftAvailableOnly ? "check-decagram" : "checkbox-blank-circle-outline"}
+                size={15}
+                color={draftAvailableOnly ? colors.emerald : colors.textMuted}
+              />
+              <Text
+                style={[
+                  styles.availabilityToggleText,
+                  draftAvailableOnly && styles.availabilityToggleTextActive,
+                ]}
+              >
+                Available chargers only
+              </Text>
+            </Pressable>
+
+            <View style={styles.modalActions}>
+              <Pressable style={[styles.modalBtn, styles.modalCancel]} onPress={resetDraftFilters}>
+                <Text style={styles.modalCancelText}>Reset</Text>
+              </Pressable>
+              <Pressable style={[styles.modalBtn, styles.modalConfirm]} onPress={applyFilters}>
+                <Text style={styles.modalConfirmText}>Apply Filters</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={reserveStation !== null}
@@ -524,20 +627,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingBottom: 10,
     backgroundColor: "rgba(7, 14, 24, 0.74)",
+    gap: 8,
+  },
+  headerTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
   header: {
     color: colors.text,
     fontSize: 24,
     fontWeight: "800",
   },
-  searchRow: {
-    marginTop: 8,
-    flexDirection: "row",
+  headerSub: {
+    marginTop: 2,
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  headerLocateBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: "rgba(8, 17, 28, 0.9)",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "center",
   },
   searchWrap: {
-    flex: 1,
     height: 44,
     borderRadius: 13,
     borderWidth: 1,
@@ -553,52 +670,70 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 14,
   },
-  actionSquare: {
-    height: 44,
-    width: 44,
-    borderRadius: 13,
+  controlsRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  controlBtn: {
+    flex: 1,
+    minHeight: 36,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: "rgba(8, 17, 28, 0.9)",
+    backgroundColor: "#081727",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    paddingHorizontal: 8,
+  },
+  sortBtn: {
+    borderColor: "#31d4f55c",
+    backgroundColor: "#31d4f51c",
+  },
+  filterOpenBtn: {
+    borderColor: "#f4b24566",
+    backgroundColor: "#f4b24521",
+  },
+  filterCountBadge: {
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    backgroundColor: colors.emerald,
     alignItems: "center",
     justifyContent: "center",
   },
-  toggleRow: {
-    marginTop: 8,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 8,
+  filterCountText: {
+    color: "#02231a",
+    fontSize: 10,
+    fontWeight: "800",
   },
-  toggleChip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 99,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    backgroundColor: "#091827",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  toggleChipActive: {
+  controlBtnActive: {
     borderColor: "#24d6a066",
     backgroundColor: "#24d6a023",
   },
-  toggleChipText: {
+  controlBtnDisabled: {
+    opacity: 0.5,
+  },
+  controlBtnText: {
     color: colors.textMuted,
     fontSize: 11,
     fontWeight: "700",
   },
-  toggleChipTextActive: {
+  controlBtnTextActive: {
     color: colors.emerald,
   },
-  filterStrip: {
-    marginTop: 8,
+  filterLabel: {
+    marginTop: 2,
+    color: colors.textSoft,
+    fontSize: 11,
+    fontWeight: "700",
   },
-  filterStripContent: {
+  filterWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
-    paddingRight: 14,
   },
   filterChip: {
     borderWidth: 1,
@@ -624,13 +759,8 @@ const styles = StyleSheet.create({
   filterChipTextActive: {
     color: colors.text,
   },
-  headerHint: {
-    color: colors.cyan,
-    fontSize: 11,
-    fontWeight: "700",
-  },
   summaryRow: {
-    marginTop: 8,
+    marginTop: 2,
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
@@ -646,8 +776,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
+  emptyFilterText: {
+    color: colors.amber,
+    fontSize: 11,
+    fontWeight: "700",
+  },
   errorText: {
-    marginTop: 4,
     color: colors.rose,
     fontSize: 12,
   },
@@ -758,6 +892,16 @@ const styles = StyleSheet.create({
     paddingBottom: 22,
     gap: 10,
   },
+  filterModalCard: {
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.bgCard,
+    padding: 16,
+    paddingBottom: 22,
+    gap: 10,
+  },
   modalHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -837,6 +981,30 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.text,
     fontSize: 13,
+  },
+  availabilityToggle: {
+    marginTop: 2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    minHeight: 40,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: colors.bg,
+  },
+  availabilityToggleActive: {
+    borderColor: "#24d6a066",
+    backgroundColor: "#24d6a023",
+  },
+  availabilityToggleText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  availabilityToggleTextActive: {
+    color: colors.emerald,
   },
   reservationList: {
     borderRadius: 12,
