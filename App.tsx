@@ -5,13 +5,22 @@ import { useCallback, useEffect, useState } from "react";
 import { Modal, Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
 import { BottomNav } from "./src/components/ui/BottomNav";
 import { carModels } from "./src/data/cars";
+import { chargingStations } from "./src/data/stations";
 import { FavoritesScreen } from "./src/screens/FavoritesScreen";
 import { HomeScreen } from "./src/screens/HomeScreen";
 import { MapScreen } from "./src/screens/MapScreen";
 import { ProfileScreen } from "./src/screens/ProfileScreen";
 import { SessionScreen } from "./src/screens/SessionScreen";
+import { getSessionSnapshot } from "./src/sessionMetrics";
 import { colors } from "./src/theme";
-import { ActiveSession, ChargingStation, PaymentMethod, ReservationEntry, TabKey } from "./src/types";
+import {
+  ActiveSession,
+  ChargingStation,
+  PaymentMethod,
+  ReservationEntry,
+  SessionHistoryEntry,
+  TabKey,
+} from "./src/types";
 import { ToastMessage, ToastMessagePayload } from "./src/components/ui/toastmessage";
 
 const STORAGE_KEYS = {
@@ -20,6 +29,7 @@ const STORAGE_KEYS = {
   carModel: "uzaro:carModel",
   activeSession: "uzaro:activeSession",
   reservations: "uzaro:reservations",
+  sessionHistory: "uzaro:sessionHistory",
 } as const;
 const SESSION_AUTH_AMOUNT = 150;
 
@@ -42,6 +52,7 @@ export default function App() {
   const [reservationsByStation, setReservationsByStation] = useState<
     Record<string, ReservationEntry[]>
   >({});
+  const [sessionHistory, setSessionHistory] = useState<SessionHistoryEntry[]>([]);
   const [paymentStation, setPaymentStation] = useState<ChargingStation | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("GCash");
   const [toast, setToast] = useState<ToastMessagePayload | null>(null);
@@ -67,6 +78,9 @@ export default function App() {
       setActiveSession(parseJson<ActiveSession | null>(map[STORAGE_KEYS.activeSession] ?? null, null));
       setReservationsByStation(
         parseJson<Record<string, ReservationEntry[]>>(map[STORAGE_KEYS.reservations] ?? null, {})
+      );
+      setSessionHistory(
+        parseJson<SessionHistoryEntry[]>(map[STORAGE_KEYS.sessionHistory] ?? null, [])
       );
       setIsReady(true);
     })();
@@ -102,6 +116,13 @@ export default function App() {
       () => undefined
     );
   }, [reservationsByStation, isReady]);
+
+  useEffect(() => {
+    if (!isReady) return;
+    AsyncStorage.setItem(STORAGE_KEYS.sessionHistory, JSON.stringify(sessionHistory)).catch(
+      () => undefined
+    );
+  }, [sessionHistory, isReady]);
 
   const toggleFavorite = (stationId: string) => {
     setFavoriteIds((prev) =>
@@ -197,6 +218,30 @@ export default function App() {
   };
 
   const stopSession = () => {
+    if (activeSession) {
+      const station = chargingStations.find((item) => item.id === activeSession.stationId);
+      const snapshot = getSessionSnapshot(activeSession.startedAt, station?.price ?? 18.5);
+      const historyEntry: SessionHistoryEntry = {
+        id: `history-${Date.now()}`,
+        stationId: activeSession.stationId,
+        stationName: activeSession.stationName,
+        startedAt: activeSession.startedAt,
+        endedAt: new Date().toISOString(),
+        elapsedSec: snapshot.elapsedSec,
+        progressPercent: snapshot.progressPercent,
+        energyAddedKwh: snapshot.energyAddedKwh,
+        estimatedCost: snapshot.estimatedCost,
+        paymentMethod: activeSession.paymentMethod ?? "GCash",
+      };
+
+      setSessionHistory((prev) => [historyEntry, ...prev].slice(0, 40));
+      showToast({
+        title: "Session completed",
+        message: `${snapshot.energyAddedKwh.toFixed(1)} kWh | PHP ${snapshot.estimatedCost.toFixed(2)}`,
+        tone: "success",
+      });
+    }
+
     setActiveSession(null);
     setActiveTab("Home");
   };
@@ -222,12 +267,14 @@ export default function App() {
     setFavoriteIds([]);
     setActiveSession(null);
     setReservationsByStation({});
+    setSessionHistory([]);
     setPaymentStation(null);
     setActiveTab("Home");
     AsyncStorage.multiRemove([
       STORAGE_KEYS.favorites,
       STORAGE_KEYS.activeSession,
       STORAGE_KEYS.reservations,
+      STORAGE_KEYS.sessionHistory,
     ]).catch(() => undefined);
   };
 
@@ -249,6 +296,8 @@ export default function App() {
             selectedCarId={selectedCarId}
             activeSession={activeSession}
             reservationsByStation={reservationsByStation}
+            favoriteCount={favoriteIds.length}
+            sessionHistory={sessionHistory}
             onSelectTab={setActiveTab}
           />
         ) : null}
@@ -290,6 +339,7 @@ export default function App() {
           <ProfileScreen
             walletBalance={walletBalance}
             selectedCarId={selectedCarId}
+            sessionHistory={sessionHistory}
             onTopUp={topUpWallet}
             onSelectCar={setSelectedCarId}
             onSignOut={signOut}

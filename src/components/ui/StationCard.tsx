@@ -25,13 +25,16 @@ export function StationCard({
   startDisabledText,
 }: StationCardProps) {
   const availabilityColor = station.availableChargers > 0 ? colors.emerald : "#f97316";
+  const connectorLabel = station.connectorTypes.join(" / ");
 
   return (
     <View style={styles.card}>
+      <View style={styles.cardGlow} />
       <View style={styles.row}>
         <View style={{ flex: 1 }}>
           <Text style={styles.name}>{station.name}</Text>
           <Text style={styles.address}>{station.address}</Text>
+          <Text style={styles.operator}>Operator: {station.operator}</Text>
         </View>
         <Pressable onPress={() => onToggleFavorite(station.id)} style={styles.iconButton}>
           <MaterialCommunityIcons
@@ -45,6 +48,13 @@ export function StationCard({
       <View style={[styles.badge, { backgroundColor: `${availabilityColor}22` }]}>
         <Text style={[styles.badgeText, { color: availabilityColor }]}>
           {station.availableChargers}/{station.totalChargers} available
+        </Text>
+      </View>
+
+      <View style={styles.connectorChip}>
+        <MaterialCommunityIcons name="power-plug-outline" size={14} color={colors.cyan} />
+        <Text style={styles.connectorText}>
+          {connectorLabel} | {station.maxPower}kW
         </Text>
       </View>
 
@@ -99,6 +109,16 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: 14,
     gap: 10,
+    overflow: "hidden",
+  },
+  cardGlow: {
+    position: "absolute",
+    width: 170,
+    height: 170,
+    borderRadius: 85,
+    backgroundColor: "#31d4f514",
+    right: -80,
+    top: -120,
   },
   row: {
     flexDirection: "row",
@@ -114,6 +134,12 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginTop: 2,
     fontSize: 13,
+  },
+  operator: {
+    marginTop: 2,
+    color: colors.cyan,
+    fontSize: 11,
+    fontWeight: "600",
   },
   iconButton: {
     width: 34,
@@ -133,6 +159,23 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 12,
     fontWeight: "700",
+  },
+  connectorChip: {
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 99,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: "#0b1827",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  connectorText: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "600",
   },
   metrics: {
     flexDirection: "row",

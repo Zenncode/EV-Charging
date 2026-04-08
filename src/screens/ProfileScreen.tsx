@@ -3,10 +3,12 @@ import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from "react-n
 import { carModels } from "../data/cars";
 import { colors } from "../theme";
 import { ToastMessagePayload } from "../components/ui/toastmessage";
+import { SessionHistoryEntry } from "../types";
 
 interface ProfileScreenProps {
   walletBalance: number;
   selectedCarId: string;
+  sessionHistory: SessionHistoryEntry[];
   onTopUp: () => void;
   onSelectCar: (carId: string) => void;
   onSignOut: () => void;
@@ -22,9 +24,17 @@ const menuItems = [
   "Help and Support",
 ];
 
+function formatDuration(seconds: number) {
+  const mins = Math.floor(seconds / 60);
+  const hrs = Math.floor(mins / 60);
+  if (hrs > 0) return `${hrs}h ${mins % 60}m`;
+  return `${mins}m`;
+}
+
 export function ProfileScreen({
   walletBalance,
   selectedCarId,
+  sessionHistory,
   onTopUp,
   onSelectCar,
   onSignOut,
@@ -42,9 +52,14 @@ export function ProfileScreen({
     });
   };
 
+  const totalEnergy = sessionHistory.reduce((sum, item) => sum + item.energyAddedKwh, 0);
+  const totalSpend = sessionHistory.reduce((sum, item) => sum + item.estimatedCost, 0);
+  const recentSessions = sessionHistory.slice(0, 4);
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.hero}>
+        <View style={styles.heroGlow} />
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>JD</Text>
         </View>
@@ -58,6 +73,21 @@ export function ProfileScreen({
         <Pressable style={styles.topUpBtn} onPress={onTopUp}>
           <Text style={styles.topUpText}>Top Up + PHP 500</Text>
         </Pressable>
+      </View>
+
+      <View style={styles.analyticsGrid}>
+        <View style={styles.analyticsCard}>
+          <Text style={styles.analyticsLabel}>Sessions Logged</Text>
+          <Text style={styles.analyticsValue}>{sessionHistory.length}</Text>
+        </View>
+        <View style={styles.analyticsCard}>
+          <Text style={styles.analyticsLabel}>Energy Added</Text>
+          <Text style={styles.analyticsValue}>{totalEnergy.toFixed(1)} kWh</Text>
+        </View>
+        <View style={styles.analyticsCard}>
+          <Text style={styles.analyticsLabel}>Charging Spend</Text>
+          <Text style={styles.analyticsValue}>PHP {totalSpend.toFixed(2)}</Text>
+        </View>
       </View>
 
       <View style={styles.section}>
@@ -93,6 +123,28 @@ export function ProfileScreen({
         />
       </View>
 
+      <View style={styles.historyCard}>
+        <Text style={styles.sectionTitle}>Recent Sessions</Text>
+        {recentSessions.length === 0 ? (
+          <Text style={styles.historyEmpty}>No completed sessions yet. Start charging from Maps.</Text>
+        ) : (
+          recentSessions.map((entry) => (
+            <View key={entry.id} style={styles.historyRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.historyStation}>{entry.stationName}</Text>
+                <Text style={styles.historyMeta}>
+                  {formatDuration(entry.elapsedSec)} | {entry.energyAddedKwh.toFixed(1)} kWh
+                </Text>
+              </View>
+              <View style={{ alignItems: "flex-end" }}>
+                <Text style={styles.historyCost}>PHP {entry.estimatedCost.toFixed(2)}</Text>
+                <Text style={styles.historyMeta}>{entry.paymentMethod}</Text>
+              </View>
+            </View>
+          ))
+        )}
+      </View>
+
       <View style={styles.menuCard}>
         {menuItems.map((item, index) => (
           <Pressable
@@ -126,24 +178,34 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 20,
+    paddingBottom: 22,
     gap: 12,
   },
   hero: {
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.bgCard,
+    backgroundColor: "#0f2034",
     alignItems: "center",
     paddingVertical: 18,
+    overflow: "hidden",
+  },
+  heroGlow: {
+    position: "absolute",
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: "#31d4f522",
+    top: -130,
+    right: -80,
   },
   avatar: {
     width: 62,
     height: 62,
     borderRadius: 31,
-    backgroundColor: "#0ea5e942",
+    backgroundColor: "#143244",
     borderWidth: 1,
-    borderColor: "#38bdf855",
+    borderColor: "#31d4f55b",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -166,18 +228,19 @@ const styles = StyleSheet.create({
   walletCard: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#a855f766",
-    backgroundColor: "#a855f724",
+    borderColor: "#24d6a066",
+    backgroundColor: "#123228",
     padding: 14,
   },
   walletLabel: {
-    color: "#f5d0fe",
+    color: "#a7f3d0",
     fontSize: 12,
+    fontWeight: "700",
   },
   walletValue: {
     marginTop: 6,
     color: colors.text,
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: "800",
   },
   topUpBtn: {
@@ -191,6 +254,30 @@ const styles = StyleSheet.create({
   topUpText: {
     color: colors.text,
     fontWeight: "700",
+  },
+  analyticsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  analyticsCard: {
+    width: "48.8%",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.bgCard,
+    padding: 10,
+  },
+  analyticsLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  analyticsValue: {
+    marginTop: 4,
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "800",
   },
   section: {
     gap: 8,
@@ -213,6 +300,38 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 13,
     textAlign: "center",
+  },
+  historyCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.bgCard,
+    padding: 12,
+    gap: 10,
+  },
+  historyEmpty: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  historyRow: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+  },
+  historyStation: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  historyMeta: {
+    color: colors.textMuted,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  historyCost: {
+    color: colors.emerald,
+    fontSize: 12,
+    fontWeight: "800",
   },
   menuCard: {
     borderRadius: 16,

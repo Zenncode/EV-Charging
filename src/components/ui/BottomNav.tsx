@@ -24,36 +24,48 @@ const items: {
 export function BottomNav({ activeTab, onChange }: BottomNavProps) {
   return (
     <View style={styles.wrapper}>
-      {items.map((item) => {
-        const isActive = activeTab === item.key;
-        return (
-          <Pressable
-            key={item.key}
-            style={[styles.item, isActive && styles.itemActive]}
-            onPress={() => onChange(item.key)}
-          >
-            <MaterialCommunityIcons
-              name={isActive ? item.activeIcon : item.icon}
-              size={21}
-              color={isActive ? colors.emerald : colors.textMuted}
-            />
-            <Text style={[styles.label, isActive && styles.labelActive]}>{item.label}</Text>
-          </Pressable>
-        );
-      })}
+      <View style={styles.navCard}>
+        {items.map((item) => {
+          const isActive = activeTab === item.key;
+          return (
+            <Pressable
+              key={item.key}
+              style={[styles.item, isActive && styles.itemActive]}
+              onPress={() => onChange(item.key)}
+            >
+              <MaterialCommunityIcons
+                name={isActive ? item.activeIcon : item.icon}
+                size={21}
+                color={isActive ? colors.emerald : colors.textMuted}
+              />
+              <Text style={[styles.label, isActive && styles.labelActive]}>{item.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
-    flexDirection: "row",
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: "#040f1e",
-    paddingHorizontal: 8,
-    paddingTop: 8,
+    backgroundColor: colors.bg,
+    paddingHorizontal: 10,
+    paddingTop: 6,
     paddingBottom: 12,
+  },
+  navCard: {
+    flexDirection: "row",
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: "#071324",
+    borderRadius: 18,
+    padding: 6,
+    shadowColor: "#000",
+    shadowOpacity: 0.24,
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 12,
+    elevation: 8,
   },
   item: {
     flex: 1,
@@ -65,16 +77,16 @@ const styles = StyleSheet.create({
   },
   itemActive: {
     borderWidth: 1,
-    borderColor: "#16d5a249",
-    backgroundColor: "#0a2c31",
+    borderColor: "#24d6a056",
+    backgroundColor: "#0d2b36",
   },
   label: {
     color: colors.textMuted,
     fontSize: 11,
-    fontWeight: "400",
+    fontWeight: "500",
   },
   labelActive: {
     color: colors.emerald,
-    fontWeight: "500",
+    fontWeight: "700",
   },
 });

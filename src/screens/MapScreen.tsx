@@ -8,6 +8,7 @@ import {
   Modal,
   PanResponder,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -18,7 +19,7 @@ import MapView, { Callout, Circle, Marker, Region } from "react-native-maps";
 import { StationCard } from "../components/ui/StationCard";
 import { chargingStations } from "../data/stations";
 import { colors } from "../theme";
-import { ActiveSession, ChargingStation, ReservationEntry } from "../types";
+import { ActiveSession, ChargingSpeed, ChargingStation, ConnectorType, ReservationEntry } from "../types";
 import { ToastMessagePayload } from "../components/ui/toastmessage";
 
 const defaultRegion: Region = {
@@ -27,6 +28,9 @@ const defaultRegion: Region = {
   latitudeDelta: 0.18,
   longitudeDelta: 0.12,
 };
+
+const speedFilters: Array<"All" | ChargingSpeed> = ["All", "Slow", "Fast", "Ultra Fast"];
+const connectorFilters: Array<"All" | ConnectorType> = ["All", "CCS", "Type 2", "CHAdeMO", "Tesla"];
 
 interface MapScreenProps {
   favoriteIds: string[];
@@ -49,6 +53,9 @@ export function MapScreen({
 }: MapScreenProps) {
   const [search, setSearch] = useState("");
   const [sortByNearest, setSortByNearest] = useState(true);
+  const [speedFilter, setSpeedFilter] = useState<"All" | ChargingSpeed>("All");
+  const [connectorFilter, setConnectorFilter] = useState<"All" | ConnectorType>("All");
+  const [availableOnly, setAvailableOnly] = useState(false);
   const [region, setRegion] = useState<Region>(defaultRegion);
   const [userCoord, setUserCoord] = useState<{ latitude: number; longitude: number } | null>(null);
   const [reserveStation, setReserveStation] = useState<ChargingStation | null>(null);
@@ -64,12 +71,29 @@ export function MapScreen({
   const filteredStations = useMemo(() => {
     const q = search.trim().toLowerCase();
     const list = chargingStations.filter((station) => {
-      if (!q) return true;
-      return station.name.toLowerCase().includes(q) || station.address.toLowerCase().includes(q);
+      if (q && !station.name.toLowerCase().includes(q) && !station.address.toLowerCase().includes(q)) {
+        return false;
+      }
+      if (speedFilter !== "All" && station.speed !== speedFilter) {
+        return false;
+      }
+      if (connectorFilter !== "All" && !station.connectorTypes.includes(connectorFilter)) {
+        return false;
+      }
+      if (availableOnly && station.availableChargers <= 0) {
+        return false;
+      }
+      return true;
     });
 
     return list.sort((a, b) => (sortByNearest ? a.distance - b.distance : b.distance - a.distance));
-  }, [search, sortByNearest]);
+  }, [availableOnly, connectorFilter, search, sortByNearest, speedFilter]);
+
+  const availableCount = filteredStations.filter((station) => station.availableChargers > 0).length;
+  const avgRate =
+    filteredStations.length > 0
+      ? filteredStations.reduce((sum, station) => sum + station.price, 0) / filteredStations.length
+      : 0;
 
   const requestLocation = async () => {
     try {
@@ -238,7 +262,7 @@ export function MapScreen({
       </MapView>
 
       <View style={styles.overlayTop}>
-        <Text style={styles.header}>Electric Uzaro</Text>
+        <Text style={styles.header}>Explore Chargers</Text>
         <View style={styles.searchRow}>
           <View style={styles.searchWrap}>
             <MaterialCommunityIcons name="magnify" size={18} color={colors.textMuted} />
@@ -261,9 +285,74 @@ export function MapScreen({
             <MaterialCommunityIcons name="crosshairs-gps" size={18} color={colors.text} />
           </Pressable>
         </View>
-        <Text style={styles.headerHint}>
-          {sortByNearest ? "Sort: nearest first" : "Sort: farthest first"}
-        </Text>
+
+        <View style={styles.toggleRow}>
+          <Pressable
+            style={[styles.toggleChip, availableOnly && styles.toggleChipActive]}
+            onPress={() => setAvailableOnly((prev) => !prev)}
+          >
+            <MaterialCommunityIcons
+              name={availableOnly ? "check-decagram" : "checkbox-blank-circle-outline"}
+              size={14}
+              color={availableOnly ? colors.emerald : colors.textMuted}
+            />
+            <Text style={[styles.toggleChipText, availableOnly && styles.toggleChipTextActive]}>
+              Available only
+            </Text>
+          </Pressable>
+          <Text style={styles.headerHint}>{sortByNearest ? "Nearest first" : "Farthest first"}</Text>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterStripContent}
+          style={styles.filterStrip}
+        >
+          {speedFilters.map((item) => {
+            const active = speedFilter === item;
+            return (
+              <Pressable
+                key={`speed-${item}`}
+                style={[styles.filterChip, active && styles.filterChipActive]}
+                onPress={() => setSpeedFilter(item)}
+              >
+                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                  {item === "All" ? "All Speeds" : item}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterStripContent}
+          style={styles.filterStrip}
+        >
+          {connectorFilters.map((item) => {
+            const active = connectorFilter === item;
+            return (
+              <Pressable
+                key={`connector-${item}`}
+                style={[styles.filterChip, active && styles.filterChipActiveSecondary]}
+                onPress={() => setConnectorFilter(item)}
+              >
+                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                  {item === "All" ? "All Connectors" : item}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryChip}>
+            Showing {filteredStations.length} stations ({availableCount} available)
+          </Text>
+          <Text style={styles.summaryChip}>Avg PHP {avgRate.toFixed(1)}/kWh</Text>
+        </View>
         {locationError ? <Text style={styles.errorText}>{locationError}</Text> : null}
       </View>
 
@@ -433,15 +522,16 @@ const styles = StyleSheet.create({
   overlayTop: {
     paddingTop: 14,
     paddingHorizontal: 14,
-    backgroundColor: "rgba(8, 17, 28, 0.62)",
+    paddingBottom: 10,
+    backgroundColor: "rgba(7, 14, 24, 0.74)",
   },
   header: {
     color: colors.text,
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: "800",
   },
   searchRow: {
-    marginTop: 10,
+    marginTop: 8,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
@@ -473,15 +563,92 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  headerHint: {
-    marginTop: 6,
+  toggleRow: {
+    marginTop: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 8,
+  },
+  toggleChip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 99,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: "#091827",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  toggleChipActive: {
+    borderColor: "#24d6a066",
+    backgroundColor: "#24d6a023",
+  },
+  toggleChipText: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  toggleChipTextActive: {
     color: colors.emerald,
-    fontSize: 12,
+  },
+  filterStrip: {
+    marginTop: 8,
+  },
+  filterStripContent: {
+    gap: 8,
+    paddingRight: 14,
+  },
+  filterChip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 99,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: "#081727",
+  },
+  filterChipActive: {
+    borderColor: "#31d4f566",
+    backgroundColor: "#31d4f522",
+  },
+  filterChipActiveSecondary: {
+    borderColor: "#f4b24566",
+    backgroundColor: "#f4b24523",
+  },
+  filterChipText: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  filterChipTextActive: {
+    color: colors.text,
+  },
+  headerHint: {
+    color: colors.cyan,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  summaryRow: {
+    marginTop: 8,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  summaryChip: {
+    borderRadius: 99,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: "#102233",
+    color: colors.textSoft,
+    fontSize: 11,
     fontWeight: "600",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
   errorText: {
     marginTop: 4,
-    color: "#fda4af",
+    color: colors.rose,
     fontSize: 12,
   },
   sheet: {

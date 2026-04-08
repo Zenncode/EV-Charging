@@ -45,5 +45,18 @@ export interface ActiveSession {
   authorizedAmount?: number;
 }
 
+export interface SessionHistoryEntry {
+  id: string;
+  stationId: string;
+  stationName: string;
+  startedAt: string;
+  endedAt: string;
+  elapsedSec: number;
+  progressPercent: number;
+  energyAddedKwh: number;
+  estimatedCost: number;
+  paymentMethod: PaymentMethod;
+}
+
 export type TabKey = "Home" | "Maps" | "Favorites" | "Session" | "Profile";
 export type PaymentMethod = "GCash" | "E-Wallet";
