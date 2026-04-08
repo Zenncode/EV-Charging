@@ -1,31 +1,44 @@
-# Electric Uzaro (Expo)
+# My Expo App Scaffold
 
-React Native Expo export of the Electric Uzaro app.
+This project now follows a modular Expo structure with:
 
-## Included Screens
+- `src/app` route tree scaffold (public/app/admin groups)
+- reusable UI/common/form components
+- providers (`AppProvider`, `AuthProvider`, `ThemeProvider`, `QueryProvider`)
+- backend API integration layer in `src/services/api`
+- storage abstractions in `src/services/storage`
+- typed domain models in `src/types`
+- feature-module folders in `src/features/*`
 
-- Home
-- Maps (native `react-native-maps`)
-- Favorites
-- Session
-- Profile
+## Backend API Layer
 
-## Features Ported
+The API client is implemented in:
 
-- Nearby station map markers
-- Station reservation list (who reserved per station)
-- Favorites save/remove
-- Start/stop charging session
-- Wallet top-up
-- Car model selection
-- Local persistence with AsyncStorage
+- `src/services/api/client.ts`
+- `src/services/api/endpoints.ts`
+- `src/services/api/auth.api.ts`
+- `src/services/api/user.api.ts`
+- `src/services/api/product.api.ts`
 
-## Run
+Environment variables:
+
+- `EXPO_PUBLIC_API_URL`
+- `EXPO_PUBLIC_APP_ENV`
+- `EXPO_PUBLIC_REQUEST_TIMEOUT_MS`
+
+Use `.env.example` as template.
+
+## Scripts
 
 ```bash
-cd electric-uzaro-expo
-npm install
+npm run setup-env
+npm run typecheck
+npm run clean
+npm run generate-icons
 npm run start
 ```
 
-Then open in Expo Go (Android/iOS) or emulator.
+## Notes
+
+- Existing app logic (`App.tsx`) is preserved.
+- Route files under `src/app` are scaffold placeholders ready for full Expo Router migration.
