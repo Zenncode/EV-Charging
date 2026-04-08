@@ -18,8 +18,13 @@ export function StartStepLayout({
   onPress,
 }: StartStepLayoutProps) {
   const safePercent = Math.max(0, Math.min(100, blackOverlayPercent));
-  const topAlpha = Math.min(0.28, (safePercent / 100) * 0.16);
-  const bottomAlpha = Math.min(0.5, (safePercent / 100) * 0.45);
+  const base = safePercent / 100;
+  const globalDimAlpha = Math.min(0.12, base * 0.08);
+  const fadeAlphaA = Math.min(0.1, base * 0.05);
+  const fadeAlphaB = Math.min(0.16, base * 0.09);
+  const fadeAlphaC = Math.min(0.24, base * 0.14);
+  const fadeAlphaD = Math.min(0.32, base * 0.21);
+  const fadeAlphaE = Math.min(0.42, base * 0.29);
 
   return (
     <View style={styles.container}>
@@ -29,8 +34,12 @@ export function StartStepLayout({
         style={styles.background}
         imageStyle={styles.image}
       >
-        <View style={[styles.topDim, { backgroundColor: `rgba(0, 0, 0, ${topAlpha})` }]} />
-        <View style={[styles.bottomDim, { backgroundColor: `rgba(0, 0, 0, ${bottomAlpha})` }]} />
+        <View style={[styles.globalDim, { backgroundColor: `rgba(0, 0, 0, ${globalDimAlpha})` }]} />
+        <View style={[styles.bottomFadeA, { backgroundColor: `rgba(0, 0, 0, ${fadeAlphaA})` }]} />
+        <View style={[styles.bottomFadeB, { backgroundColor: `rgba(0, 0, 0, ${fadeAlphaB})` }]} />
+        <View style={[styles.bottomFadeC, { backgroundColor: `rgba(0, 0, 0, ${fadeAlphaC})` }]} />
+        <View style={[styles.bottomFadeD, { backgroundColor: `rgba(0, 0, 0, ${fadeAlphaD})` }]} />
+        <View style={[styles.bottomFadeE, { backgroundColor: `rgba(0, 0, 0, ${fadeAlphaE})` }]} />
 
         <View style={styles.content}>
           <Text style={styles.title}>{title}</Text>
@@ -63,16 +72,44 @@ const styles = StyleSheet.create({
   image: {
     backgroundColor: "#0a1220",
   },
-  topDim: {
+  globalDim: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(3, 8, 16, 0.22)",
   },
-  bottomDim: {
+  bottomFadeA: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    height: "38%",
+    height: "68%",
+  },
+  bottomFadeB: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: "58%",
+  },
+  bottomFadeC: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: "48%",
+  },
+  bottomFadeD: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: "40%",
+  },
+  bottomFadeE: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: "33%",
     backgroundColor: "rgba(4, 9, 18, 0.66)",
   },
   content: {
