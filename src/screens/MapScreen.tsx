@@ -281,8 +281,17 @@ export function MapScreen({
             coordinate={{ latitude: station.lat, longitude: station.lng }}
             title={station.name}
             description={getMarkerDescription(station)}
-            pinColor={station.availableChargers > 0 ? "#10b981" : "#f97316"}
-          />
+            anchor={{ x: 0.5, y: 1 }}
+          >
+            <View
+              style={[
+                styles.stationMarker,
+                station.availableChargers > 0 ? styles.stationMarkerAvailable : styles.stationMarkerUnavailable,
+              ]}
+            >
+              <MaterialCommunityIcons name="gas-station" size={16} color="#f8fafc" />
+            </View>
+          </Marker>
         ))}
 
         {userCoord ? (
@@ -696,6 +705,27 @@ const styles = StyleSheet.create({
     borderRadius: 99,
     paddingHorizontal: 8,
     paddingVertical: 3,
+  },
+  stationMarker: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#020617",
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 7,
+  },
+  stationMarkerAvailable: {
+    backgroundColor: "#059669",
+    borderColor: "#34d399",
+  },
+  stationMarkerUnavailable: {
+    backgroundColor: "#ea580c",
+    borderColor: "#fdba74",
   },
   listContent: {
     paddingBottom: 24,
