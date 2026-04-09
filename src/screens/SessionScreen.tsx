@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ToastMessagePayload } from "../components/ui/toastmessage";
 import { chargingStations } from "../data/stations";
-import { getSessionSnapshot } from "../sessionMetrics";
+import { getSessionSnapshot, SESSION_TARGET_PERCENT } from "../sessionMetrics";
 import { colors } from "../theme";
 import { ActiveSession } from "../types";
 
@@ -33,13 +33,63 @@ function formatShortDateTime(iso: string) {
   return `${month}/${day} ${hours}:${mins}`;
 }
 
+const BATTERY_SEGMENT_COUNT = 10;
+
+function getBatteryTone(progress: number) {
+  if (progress >= 85) {
+    return {
+      fill: "#34d399",
+      edge: "#10b981",
+      shell: "#0d3028",
+    };
+  }
+
+  if (progress >= 55) {
+    return {
+      fill: "#2dd4bf",
+      edge: "#14b8a6",
+      shell: "#0d2f35",
+    };
+  }
+
+  if (progress >= 30) {
+    return {
+      fill: "#fbbf24",
+      edge: "#f59e0b",
+      shell: "#3a2f10",
+    };
+  }
+
+  return {
+    fill: "#fb7185",
+    edge: "#f43f5e",
+    shell: "#361624",
+  };
+}
+
+function getChargeState(progress: number) {
+  if (progress >= 95) return "Battery full";
+  if (progress >= SESSION_TARGET_PERCENT) return "Top-off stage";
+  if (progress >= 45) return "Optimal charging";
+  return "Boost charging";
+}
+
+function getCellCareEfficiency(progress: number) {
+  if (progress <= SESSION_TARGET_PERCENT) {
+    const headroom = SESSION_TARGET_PERCENT - progress;
+    return Math.round(90 + (headroom / SESSION_TARGET_PERCENT) * 8);
+  }
+  return Math.round(Math.max(76, 90 - (progress - SESSION_TARGET_PERCENT) * 0.7));
+}
+
 export function SessionScreen({ activeSession, onStopSession, onOpenMaps, onToast }: SessionScreenProps) {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
+    if (!activeSession) return;
     const timer = setInterval(() => setTick((prev) => prev + 1), 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [activeSession]);
 
   const station = activeSession
     ? chargingStations.find((item) => item.id === activeSession.stationId)
@@ -106,6 +156,17 @@ export function SessionScreen({ activeSession, onStopSession, onOpenMaps, onToas
   }
 
   const progress = Math.max(0, Math.min(100, snapshot.progressPercent));
+  const batteryTone = getBatteryTone(progress);
+  const batteryState = getChargeState(progress);
+  const activeSegments = Math.max(
+    1,
+    Math.min(BATTERY_SEGMENT_COUNT, Math.round((progress / 100) * BATTERY_SEGMENT_COUNT))
+  );
+  const chargeRatePerMinute = snapshot.elapsedSec > 0 ? (progress / snapshot.elapsedSec) * 60 : 0;
+  const energyFlowPerMinute =
+    snapshot.elapsedSec > 0 ? snapshot.energyAddedKwh / (snapshot.elapsedSec / 60) : 0;
+  const cellCareEfficiency = getCellCareEfficiency(progress);
+  const isTargetStage = progress >= SESSION_TARGET_PERCENT;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -140,30 +201,50 @@ export function SessionScreen({ activeSession, onStopSession, onOpenMaps, onToas
           <View>
             <Text style={styles.progressPercent}>{progress.toFixed(1)}%</Text>
             <Text style={styles.progressCaption}>Battery level</Text>
+            <Text style={[styles.progressState, { color: batteryTone.fill }]}>{batteryState}</Text>
           </View>
-          <View style={styles.batteryWrap}>
-            <MaterialCommunityIcons
-              name={
-                progress >= 90
-                  ? "battery-charging-100"
-                  : progress >= 70
-                    ? "battery-charging-80"
-                    : progress >= 40
-                      ? "battery-charging-50"
-                      : "battery-charging-30"
-              }
-              size={40}
-              color={colors.emerald}
-            />
+          <View style={styles.battery3DWrap}>
+            <View style={styles.batteryShadow} />
+            <View style={[styles.batteryBody, { borderColor: batteryTone.edge, backgroundColor: batteryTone.shell }]}>
+              <View style={styles.batteryGloss} />
+              <View style={styles.batteryInner}>
+                {Array.from({ length: BATTERY_SEGMENT_COUNT }).map((_, index) => (
+                  <View
+                    key={`segment-${index}`}
+                    style={[
+                      styles.batterySegment,
+                      {
+                        opacity: index < activeSegments ? 1 : 0.18,
+                        backgroundColor: index < activeSegments ? batteryTone.fill : "#264257",
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
+              <View style={styles.batterySheen} />
+            </View>
+            <View style={[styles.batteryCap, { backgroundColor: batteryTone.edge }]} />
+            <View style={[styles.batteryBoltBadge, { borderColor: `${batteryTone.fill}88` }]}>
+              <MaterialCommunityIcons name="lightning-bolt" size={12} color={batteryTone.fill} />
+            </View>
           </View>
         </View>
 
         <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${Math.max(4, progress)}%` }]} />
+          <View
+            style={[
+              styles.progressFill,
+              {
+                width: `${Math.max(4, progress)}%`,
+                backgroundColor: batteryTone.fill,
+              },
+            ]}
+          />
+          <View style={styles.progressTrackGloss} />
         </View>
         <View style={styles.progressMetaRow}>
           <Text style={styles.progressMetaText}>Start 0%</Text>
-          <Text style={styles.progressMetaTarget}>Target 80%</Text>
+          <Text style={styles.progressMetaTarget}>Target {SESSION_TARGET_PERCENT}%</Text>
           <Text style={styles.progressMetaText}>Full 100%</Text>
         </View>
 
@@ -181,6 +262,36 @@ export function SessionScreen({ activeSession, onStopSession, onOpenMaps, onToas
               <Text style={styles.timerLabel}>Remaining</Text>
             </View>
             <Text style={styles.timerValue}>{formatClock(snapshot.targetEtaSec)}</Text>
+          </View>
+        </View>
+
+        <View style={styles.efficiencyCard}>
+          <View style={styles.efficiencyHeaderRow}>
+            <Text style={styles.efficiencyTitle}>Charging Efficiency</Text>
+            <View style={styles.efficiencyBadge}>
+              <Text style={[styles.efficiencyBadgeText, { color: batteryTone.fill }]}>
+                {cellCareEfficiency}%
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.efficiencyHint}>
+            {isTargetStage
+              ? "Top-off mode is active for safer battery cells and lower thermal stress."
+              : `Fast-charge mode is optimized until ${SESSION_TARGET_PERCENT}% for healthier long-term battery life.`}
+          </Text>
+          <View style={styles.efficiencyMetricsRow}>
+            <View style={styles.efficiencyMetric}>
+              <Text style={styles.efficiencyMetricLabel}>Charge Rate</Text>
+              <Text style={styles.efficiencyMetricValue}>{chargeRatePerMinute.toFixed(1)}%/min</Text>
+            </View>
+            <View style={styles.efficiencyMetric}>
+              <Text style={styles.efficiencyMetricLabel}>Energy Flow</Text>
+              <Text style={styles.efficiencyMetricValue}>{energyFlowPerMinute.toFixed(2)} kWh/min</Text>
+            </View>
+            <View style={styles.efficiencyMetric}>
+              <Text style={styles.efficiencyMetricLabel}>Best Zone</Text>
+              <Text style={styles.efficiencyMetricValue}>{SESSION_TARGET_PERCENT - 20}-{SESSION_TARGET_PERCENT}%</Text>
+            </View>
           </View>
         </View>
       </View>
@@ -448,13 +559,86 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
-  batteryWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 16,
+  progressState: {
+    marginTop: 3,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  battery3DWrap: {
+    width: 124,
+    height: 82,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  batteryShadow: {
+    position: "absolute",
+    width: 92,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "rgba(6, 12, 24, 0.52)",
+    bottom: 10,
+    transform: [{ scaleX: 1.04 }],
+  },
+  batteryBody: {
+    width: 106,
+    height: 54,
+    borderRadius: 14,
+    borderWidth: 1.2,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    justifyContent: "center",
+    shadowColor: "#040912",
+    shadowOpacity: 0.38,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+    overflow: "hidden",
+  },
+  batteryGloss: {
+    position: "absolute",
+    left: 5,
+    right: 15,
+    top: 4,
+    height: 14,
+    borderRadius: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.16)",
+  },
+  batteryInner: {
+    flexDirection: "row",
+    gap: 3,
+    alignItems: "stretch",
+  },
+  batterySegment: {
+    flex: 1,
+    borderRadius: 4,
+    minHeight: 28,
+  },
+  batterySheen: {
+    position: "absolute",
+    left: 10,
+    bottom: 4,
+    width: 44,
+    height: 8,
+    borderRadius: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.13)",
+  },
+  batteryCap: {
+    position: "absolute",
+    right: 5,
+    width: 7,
+    height: 20,
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
+  },
+  batteryBoltBadge: {
+    position: "absolute",
+    right: 14,
+    top: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#10b9815f",
-    backgroundColor: "#0f2b27",
+    backgroundColor: "rgba(8, 16, 28, 0.74)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -464,11 +648,20 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "#24384f",
     overflow: "hidden",
+    position: "relative",
   },
   progressFill: {
     height: "100%",
     borderRadius: 20,
-    backgroundColor: colors.emerald,
+  },
+  progressTrackGloss: {
+    position: "absolute",
+    top: 1,
+    left: 2,
+    right: 2,
+    height: 3,
+    borderRadius: 3,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
   },
   progressMetaRow: {
     marginTop: 4,
@@ -514,6 +707,68 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "800",
     letterSpacing: 0.4,
+  },
+  efficiencyCard: {
+    marginTop: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: "#0f2338",
+    padding: 10,
+    gap: 8,
+  },
+  efficiencyHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 8,
+  },
+  efficiencyTitle: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  efficiencyBadge: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#1f3a52",
+    backgroundColor: "#0d1a29",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  efficiencyBadgeText: {
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  efficiencyHint: {
+    color: colors.textMuted,
+    fontSize: 11,
+    lineHeight: 17,
+  },
+  efficiencyMetricsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  efficiencyMetric: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: "#102741",
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+    gap: 3,
+  },
+  efficiencyMetricLabel: {
+    color: colors.textMuted,
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  efficiencyMetricValue: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: "800",
   },
   statsGrid: {
     flexDirection: "row",
